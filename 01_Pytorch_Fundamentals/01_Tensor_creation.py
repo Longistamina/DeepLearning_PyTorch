@@ -397,3 +397,89 @@ print(tensor_linspace.shape)
 So, torch.linspace() will create a tensor ranging from 2 to 10.
 All the values are evenly spaced so that the total number of values is 20 (steps, or length)
 '''
+
+
+#-----------------------------------------------------------------------------------------------------------------------------#
+#--------------------------------------------------- 4. Tensor-like ----------------------------------------------------------#
+#-----------------------------------------------------------------------------------------------------------------------------#
+'''
+Tensor-like functions help generate a new tensor with the same shape as the given tensor
+
+For example, torch.randn_like(x) works like torch.randn(), but the output will have the same shape as x
+'''
+
+tensor_ref = torch.rand(3, 5)
+print(tensor_ref.shape)
+# torch.Size([3, 5])
+
+#######################
+## torch.rand_like() ##
+#######################
+
+print(torch.rand_like(tensor_ref))
+# tensor([[0.6853, 0.2342, 0.4317, 0.6011, 0.8146],
+#         [0.1098, 0.0684, 0.6711, 0.9599, 0.6371],
+#         [0.7929, 0.9341, 0.1075, 0.1388, 0.2606]])
+
+print(torch.rand_like(tensor_ref).shape)
+# torch.Size([3, 5])
+
+##########################
+## torch.randint_like() ##
+##########################
+
+print(torch.randint_like(input=tensor_ref, low=1, high=10))
+# tensor([[7., 7., 1., 5., 5.],
+#         [2., 1., 8., 6., 9.],
+#         [9., 7., 4., 9., 1.]])
+
+print(torch.randint_like(input=tensor_ref, low=1, high=10).shape)
+# torch.Size([3, 5])
+
+########################
+## torch.randn_like() ##
+########################
+
+print(torch.randn_like(tensor_ref))
+# tensor([[-0.5615, -0.5936, -0.3339, -0.7805, -0.4800],
+#         [ 1.3015, -0.5433, -0.1490, -1.2496,  2.1695],
+#         [ 0.2227,  0.5529, -0.1177,  0.3645, -0.4359]])
+
+print(torch.randn_like(tensor_ref).shape)
+# torch.Size([3, 5])
+
+########################
+## torch.zeros_like() ##
+########################
+
+print(torch.zeros_like(tensor_ref))
+# tensor([[0., 0., 0., 0., 0.],
+#         [0., 0., 0., 0., 0.],
+#         [0., 0., 0., 0., 0.]])
+
+print(torch.zeros_like(tensor_ref).shape)
+# torch.Size([3, 5])
+
+#######################
+## torch.ones_like() ##
+#######################
+
+print(torch.ones_like(tensor_ref))
+# tensor([[1., 1., 1., 1., 1.],
+#         [1., 1., 1., 1., 1.],
+#         [1., 1., 1., 1., 1.]])
+
+print(torch.ones_like(tensor_ref).shape)
+# torch.Size([3, 5])
+
+#######################
+## torch.full_like() ##
+#######################
+
+print(torch.full_like(input=tensor_ref, fill_value=4.5))
+# tensor([[4.5000, 4.5000, 4.5000, 4.5000, 4.5000],
+#         [4.5000, 4.5000, 4.5000, 4.5000, 4.5000],
+#         [4.5000, 4.5000, 4.5000, 4.5000, 4.5000]])
+
+print(torch.full_like(input=tensor_ref, fill_value=4.5).shape)
+# torch.Size([3, 5])
