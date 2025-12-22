@@ -40,17 +40,29 @@ SUMMARY TABLE:
    + Tensor nD
    + From Numpy array
    
-2. Random LinSpace:
+2. Random:
    + torch.rand()
    + torch.randint()
    + torch.randn()
    + torch.manual_seed()
    + Show an image created by a random 3D tensor
+   
+3. Zeros, Ones, Full:
+   + torch.zeros()
+   + torch.ones()
+   + torch.full()
+   
+4. Range and LinSpace
+   + torch.arange()
    + torch.linspace()
    
-3. Zeros and Ones:
-   + Zeros
-   + Ones
+5. Tensor-like
+   + torch.rand_like()
+   + torch.randint_like()
+   + torch.randn_like()
+   + torch.zeros_like()
+   + torch.ones_like()
+   + torch.full_like()
 '''
 
 import torch
@@ -198,7 +210,7 @@ print(TENSOR_arr.shape)
 
 
 #------------------------------------------------------------------------------------------------------------------------#
-#--------------------------------------------- 1. Random and LinSpace ---------------------------------------------------#
+#---------------------------------------------------- 1. Random ---------------------------------------------------------#
 #------------------------------------------------------------------------------------------------------------------------#
 
 ##################
@@ -297,26 +309,14 @@ plt.imshow(IMAGE_FHD.permute(2, 1, 0).numpy()) # permutate to (Width, Height, Ch
 plt.axis("off") # Hide the x/y axes
 plt.show()
 
-######################
-## torch.linspace() ##
-######################
-'''Creates a one-dimensional tensor of size steps whose values are evenly spaced from start to end, inclusive.'''
-
-tensor_linspace = torch.linspace(start=2, end=10, steps=20)
-
-print(tensor_linspace)
-# tensor([ 2.0000,  2.4211,  2.8421,  3.2632,  3.6842,  4.1053,  4.5263,  4.9474,
-#          5.3684,  5.7895,  6.2105,  6.6316,  7.0526,  7.4737,  7.8947,  8.3158,
-#          8.7368,  9.1579,  9.5789, 10.0000])
-
 
 #------------------------------------------------------------------------------------------------------------------------#
 #------------------------------------------------ 3. Zeros and Ones -----------------------------------------------------#
 #------------------------------------------------------------------------------------------------------------------------#
 
-###########
-## Zeros ##
-###########
+###################
+## torch.zeros() ##
+###################
 
 tensor_zeros = torch.zeros(size=(5, 3))
 
@@ -327,9 +327,9 @@ print(tensor_zeros)
 #         [0., 0., 0.],
 #         [0., 0., 0.]])
 
-##########
-## Ones ##
-##########
+##################
+## torch.ones() ##
+##################
 
 tensor_ones = torch.ones(size=(3,7))
 
@@ -337,3 +337,63 @@ print(tensor_ones)
 # tensor([[1., 1., 1., 1., 1., 1., 1.],
 #         [1., 1., 1., 1., 1., 1., 1.],
 #         [1., 1., 1., 1., 1., 1., 1.]])
+
+##################
+## torch.full() ##
+##################
+
+tensor_full = torch.full(size=(3, 3), fill_value=2.5)
+
+print(tensor_full)
+# tensor([[2.5000, 2.5000, 2.5000],
+#         [2.5000, 2.5000, 2.5000],
+#         [2.5000, 2.5000, 2.5000]])
+
+
+#-----------------------------------------------------------------------------------------------------------------------------#
+#------------------------------------------------ 4. Arange and LinSpace -----------------------------------------------------#
+#-----------------------------------------------------------------------------------------------------------------------------#
+
+####################
+## torch.arange() ##
+####################
+'''
+Returns a 1-D tensor of size=(end-start)/step with values from the interval [start, end) taken with common difference step beginning from start.
+
+Fix the space between elements
+'''
+
+print(torch.arange(5))
+# tensor([0, 1, 2, 3, 4])
+
+print(torch.arange(10, 20))
+# tensor([10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+
+print(torch.arange(1, 10, step=2))
+# tensor([1, 3, 5, 7, 9])
+
+print(torch.arange(1, 2, step=0.25))
+# tensor([1.0000, 1.2500, 1.5000, 1.7500])
+
+######################
+## torch.linspace() ##
+######################
+'''Creates a one-dimensional tensor of size steps whose values are evenly spaced from start to end, inclusive.
+
+Fix the size (length, or steps)
+'''
+
+tensor_linspace = torch.linspace(start=2, end=10, steps=20)
+
+print(tensor_linspace)
+# tensor([ 2.0000,  2.4211,  2.8421,  3.2632,  3.6842,  4.1053,  4.5263,  4.9474,
+#          5.3684,  5.7895,  6.2105,  6.6316,  7.0526,  7.4737,  7.8947,  8.3158,
+#          8.7368,  9.1579,  9.5789, 10.0000])
+
+print(tensor_linspace.shape)
+# torch.Size([20])
+
+'''
+So, torch.linspace() will create a tensor ranging from 2 to 10.
+All the values are evenly spaced so that the total number of values is 20 (steps, or length)
+'''
