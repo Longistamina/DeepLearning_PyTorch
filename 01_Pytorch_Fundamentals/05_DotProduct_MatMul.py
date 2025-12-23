@@ -79,6 +79,7 @@ print(tensor_M2)
 ########################################
 ## torch.matmul(tensor_M1, tensor_M2) ##
 ########################################
+'''Same as torch.mm(tensor_M1, tensor_M2)'''
 
 print(torch.matmul(tensor_M1, tensor_M2))
 # tensor([[ 3.2638, 23.7175,  3.3714, -7.4443, -8.1525],
@@ -94,6 +95,7 @@ print(torch.matmul(tensor_M2, tensor_M1))
 #################################
 ## tensor_M1.matmul(tensor_M2) ##
 #################################
+'''Same as tensor_M1.mm(tensor_M2)'''
 
 print(tensor_M1.matmul(tensor_M2))
 # tensor([[ 3.2638, 23.7175,  3.3714, -7.4443, -8.1525],
