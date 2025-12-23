@@ -63,9 +63,15 @@ SUMMARY TABLE:
    + torch.zeros_like()
    + torch.ones_like()
    + torch.full_like()
+   
+6. Important parameters:
+   + dtype (torch.float16, torch.float32, torch.float64, ...)
+   + device ("cpu" or "cuda")
+   + requires_grad (True or False): If autograd should record operations on the returned tensor
 '''
 
 import torch
+
 
 #--------------------------------------------------------------------------------------------------------------------#
 #--------------------------------------------- 1. Create a tensor ---------------------------------------------------#
@@ -483,3 +489,25 @@ print(torch.full_like(input=tensor_ref, fill_value=4.5))
 
 print(torch.full_like(input=tensor_ref, fill_value=4.5).shape)
 # torch.Size([3, 5])
+
+
+#-------------------------------------------------------------------------------------------------------------------------#
+#--------------------------------------------- 6. Important parameters ---------------------------------------------------#
+#-------------------------------------------------------------------------------------------------------------------------#
+'''
+When creating a tensor, there are 3 important parameters that should always be specified:
+  + dtype (torch.float16, torch.float32, torch.float64, ...)
+  + device ("cpu" or "cuda")
+  + requires_grad (True or False): If autograd should record operations on the returned tensor
+'''
+
+tensor_demo = torch.tensor(
+  data=[2, 5.3, 8, 15.542],
+  dtype=torch.float16,
+  device="cuda",
+  requires_grad=False
+)
+
+print(tensor_demo)
+# tensor([ 2.0000,  5.3008,  8.0000, 15.5391], device='cuda:0',
+#        dtype=torch.float16)
