@@ -65,9 +65,9 @@ SUMMARY TABLE:
    + torch.full_like()
    
 6. Important parameters:
-   + dtype (torch.float16, torch.float32, torch.float64, ...)
-   + device ("cpu" or "cuda")
-   + requires_grad (True or False): If autograd should record operations on the returned tensor
+   + dtype: what datatype the tensor is (torch.float16, torch.float32, torch.float64, ...)
+   + device: what device is this tensor on ("cpu" or "cuda")
+   + requires_grad: whether or not to track gradients with this tensor (True or False)
 '''
 
 import torch
@@ -496,9 +496,16 @@ print(torch.full_like(input=tensor_ref, fill_value=4.5).shape)
 #-------------------------------------------------------------------------------------------------------------------------#
 '''
 When creating a tensor, there are 3 important parameters that should always be specified:
-  + dtype (torch.float16, torch.float32, torch.float64, ...)
-  + device ("cpu" or "cuda")
-  + requires_grad (True or False): If autograd should record operations on the returned tensor
+  + dtype: what datatype the tensor is (torch.float16, torch.float32, torch.float64, ...)
+  + device: what device is this tensor on ("cpu" or "cuda")
+  + requires_grad: whether or not to track gradients with this tensor (True or False)
+  
+#######################
+
+3 big errors in Pytorch
+  + Tensors not the right dtype
+  + Tensors not the right shape
+  + Tensors not the right device
 '''
 
 tensor_demo = torch.tensor(
