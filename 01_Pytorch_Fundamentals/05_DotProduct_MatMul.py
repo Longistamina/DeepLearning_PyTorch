@@ -63,3 +63,60 @@ print(tensor_v2 @ tensor_v3)
 #--------------------------- 2. Matrix Product of two 2D tensors with SAME INNER SIZE -------------------------------#
 #--------------------------------------------------------------------------------------------------------------------#
 
+torch.manual_seed(42)
+tensor_M1 = torch.randint(1, 11, size=(2, 3), dtype=torch.float32) # Set dtype to float32 for dtype synchronization
+print(tensor_M1)
+# tensor([[3., 8., 7.],
+#         [5., 7., 6.]])
+
+torch.manual_seed(42)
+tensor_M2 = torch.randn(size=(3, 5))
+print(tensor_M2)
+# tensor([[ 0.3367,  0.1288,  0.2345,  0.2303, -1.1229],
+#         [-0.1863,  2.2082, -0.6380,  0.4617,  0.2674],
+#         [ 0.5349,  0.8094,  1.1103, -1.6898, -0.9890]])
+
+########################################
+## torch.matmul(tensor_M1, tensor_M2) ##
+########################################
+
+print(torch.matmul(tensor_M1, tensor_M2))
+# tensor([[ 3.2638, 23.7175,  3.3714, -7.4443, -8.1525],
+#         [ 3.5886, 20.9576,  3.3681, -5.7555, -9.6766]])
+
+print(torch.matmul(tensor_M1, tensor_M2).shape)
+# torch.Size([2, 5])
+# 2x3 @ 3x5 = 2x5
+
+print(torch.matmul(tensor_M2, tensor_M1))
+'''RuntimeError: mat1 and mat2 shapes cannot be multiplied (3x5 and 2x3)'''
+
+#################################
+## tensor_M1.matmul(tensor_M2) ##
+#################################
+
+print(tensor_M1.matmul(tensor_M2))
+# tensor([[ 3.2638, 23.7175,  3.3714, -7.4443, -8.1525],
+#         [ 3.5886, 20.9576,  3.3681, -5.7555, -9.6766]])
+
+print(tensor_M1.matmul(tensor_M2).shape)
+# torch.Size([2, 5])
+# 2x3 @ 3x5 = 2x5
+
+print(tensor_M2.matmul(tensor_M1))
+'''RuntimeError: mat1 and mat2 shapes cannot be multiplied (3x5 and 2x3)'''
+
+#############################################
+## tensor_M1 @ tensor_M2 (Not recommended) ##
+#############################################
+
+print(tensor_M1 @ tensor_M2)
+# tensor([[ 3.2638, 23.7175,  3.3714, -7.4443, -8.1525],
+#         [ 3.5886, 20.9576,  3.3681, -5.7555, -9.6766]])
+
+print((tensor_M1 @ tensor_M2).shape)
+# torch.Size([2, 5])
+# 2x3 @ 3x5 = 2x5
+
+print(tensor_M2 @ tensor_M1)
+'''RuntimeError: mat1 and mat2 shapes cannot be multiplied (3x5 and 2x3)'''
