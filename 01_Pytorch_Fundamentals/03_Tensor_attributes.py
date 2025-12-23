@@ -1,12 +1,8 @@
 '''
 1. tensor.ndim: the number of dimensions (rank) the tensor has.
-
 2. tensor.shape: the size of each dimension in a torch.Size object.
-
 3. tensor.dtype: the data type of the tensor
-
 4. tensor.device: the device the tensor is on
-
 5. tensor.requires_grad: the boolean indicating whether PyTorch should track gradients for this tensor
 '''
 
