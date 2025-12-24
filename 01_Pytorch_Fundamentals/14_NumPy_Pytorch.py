@@ -53,6 +53,14 @@ The default dtype in torch for float numbers is torch.float32.
 
 So when using tensor.numpy()) to convert it into a numpy array,
 the resulted array will be defined as float32.
-
-NOTE: if a tensor is on GPU ("cuda"), then tensor.numpy() will return ERROR
 '''
+
+tensor_gpu = torch.tensor([1, 2, 3], device="cuda")
+print(tensor_gpu.numpy())
+# TypeError: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first.
+'''NOTE: if a tensor is on GPU ("cuda"), then tensor.numpy() will return ERROR'''
+
+# First, bring it back to .cpu(), then .numpy()
+tensor_cpu_numpy = tensor_gpu.cpu().numpy()
+print(tensor_cpu_numpy)
+# [1 2 3]
