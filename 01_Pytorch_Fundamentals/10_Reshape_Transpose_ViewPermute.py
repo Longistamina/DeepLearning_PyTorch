@@ -10,6 +10,9 @@
    + With 3D tensor (use torch.transpose() or tensor.transpose())
 
 3. View: tensor.view(*shape_tuple)
+
+4. Permute: torch.permute(), tensor.permute()
+   + Rearranging multiple dimensions at once.
 '''
 
 import torch
@@ -280,3 +283,42 @@ print(tensor_view)
 # tensor([[ 1.31,  0.69, -1.09, -0.36, -0.91, -0.66,  0.08,  0.53],
 #         [ 0.35, -0.20, -1.05,  1.28,  0.15,  0.23,  0.01, -0.14],
 #         [ 0.58, -0.64, -2.21, -0.75,  2.81,  0.36, -0.09,  0.46]])
+
+
+#-----------------------------------------------------------------------------------------------------------#
+#------------------------------------------- 4. Permute ----------------------------------------------------#
+#-----------------------------------------------------------------------------------------------------------#
+'''
+.permute(*dims): More flexible than transpose. Reorders all dimensions at once.
+Commonly used to change (C, H, W) images to (H, W, C).
+'''
+
+# Create a 3D tensor: (Channels=3, Height=2, Width=2)
+torch.manual_seed(0)
+tensor_3D = torch.randn((3, 2, 2))
+print(tensor_3D)
+# tensor([[[ 1.54, -0.29],
+#          [-2.18,  0.57]],
+
+#         [[-1.08, -1.40],
+#          [ 0.40,  0.84]],
+
+#         [[-0.72, -0.40],
+#          [-0.60,  0.18]]])
+
+# Move Channels (0) to the end: (1, 2, 0)
+permuted = tensor_3D.permute(1, 2, 0)
+
+print(permuted)
+# tensor([[[ 1.54, -1.08, -0.72],
+#          [-0.29, -1.40, -0.40]],
+
+#         [[-2.18,  0.40, -0.60],
+#          [ 0.57,  0.84,  0.18]]])
+
+print(permuted.shape)
+# torch.Size([2, 2, 3])
+
+# Memory Note: After permute, call .contiguous() if you need to use .view()
+print(permuted.contiguous().view(-1).shape)
+# torch.Size([12])
