@@ -9,9 +9,7 @@
    + With 2D matrix
    + With 3D tensor (use torch.transpose() or tensor.transpose())
 
-3. View
-
-4. Permute
+3. View: tensor.view(*shape_tuple)
 '''
 
 import torch
@@ -268,3 +266,17 @@ After tranposing:
 
 dim0 and dim1 are swapped
 '''
+
+
+#--------------------------------------------------------------------------------------------------------#
+#--------------------------------------------- 3. View --------------------------------------------------#
+#--------------------------------------------------------------------------------------------------------#
+'''
+tensor.view(*shape_tuple) works like reshape, but returns a new tensor sharing the same memory as the original.
+'''
+
+tensor_view = tensor_M.view(3, 8)
+print(tensor_view)
+# tensor([[ 1.31,  0.69, -1.09, -0.36, -0.91, -0.66,  0.08,  0.53],
+#         [ 0.35, -0.20, -1.05,  1.28,  0.15,  0.23,  0.01, -0.14],
+#         [ 0.58, -0.64, -2.21, -0.75,  2.81,  0.36, -0.09,  0.46]])
