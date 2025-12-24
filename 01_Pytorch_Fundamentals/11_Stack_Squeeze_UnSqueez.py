@@ -1,5 +1,0 @@
-'''
-Stack
-Squeeze
-UnSqueeze
-'''
