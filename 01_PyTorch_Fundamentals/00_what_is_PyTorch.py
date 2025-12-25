@@ -1,5 +1,5 @@
 '''
-Pytorch is the most popular research deep learning framework.
+PyTorch is the most popular research deep learning framework.
 
 Write fast deep learning code in Python (able to run on a GPU or many GPUs)
 
