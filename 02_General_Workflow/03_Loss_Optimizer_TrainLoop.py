@@ -90,7 +90,7 @@ torch.manual_seed(42)
 model = LinearRegressionModel()
 model.to(device)
 
-print(model.state_dict()) # parameters before training
+print(model.state_dict()) # Parameters before training
 # OrderedDict({'coefs': tensor([0.3367], device='cuda:0'), 'bias': tensor([0.1288], device='cuda:0')})
 
 
@@ -219,3 +219,6 @@ Loss: 14.79
 Epoch: 10
 Loss: 17.13
 '''
+
+print(model.state_dict()) # Parameters after training
+# OrderedDict({'coefs': tensor([13.2005], device='cuda:0'), 'bias': tensor([7.3684], device='cuda:0')})

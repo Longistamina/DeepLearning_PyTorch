@@ -94,6 +94,9 @@ torch.manual_seed(42)
 model = LinearRegressionModel()
 model.to(device)
 
+print(model.state_dict()) # Parameters before training
+# OrderedDict({'coefs': tensor([0.3367], device='cuda:0'), 'bias': tensor([0.1288], device='cuda:0')})
+
 ##########
 ## Loss ##
 ##########
@@ -185,6 +188,9 @@ Epoch: 10
 Train loss: 280.6619
 Validation loss: 646.2153
 '''
+
+print(model.state_dict()) # Parameters after training
+# OrderedDict({'coefs': tensor([11.2700], device='cuda:0'), 'bias': tensor([17.9875], device='cuda:0')})
 
 
 #----------------------------------------------------------------------------------------------------------------------------------#
@@ -300,6 +306,9 @@ y_test_preds = lr_sklearn.predict(X_test)
 print(mean_squared_error(y_test, y_test_preds))
 # 25.54711151123047
 '''Much lower than using torch'''
+
+print(lr_sklearn.coef_, lr_sklearn.intercept_) # Parameters
+# [4.411296] 95.52976
 
 #################
 
