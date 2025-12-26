@@ -5,7 +5,7 @@
 
 3. Optimizer
 
-4. Set up a Training Loop
+4. Training Loop
 '''
 
 import torch
@@ -96,15 +96,35 @@ class LinearRegressionModel(nn.Module):
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         return self.coefs*X + self.bias
     
+##################
+## Define model ##
+##################
+
+torch.manual_seed(42)
+model = LinearRegressionModel()
+
 
 #----------------------------------------------------------------------------------------------------------#
 #----------------------------------------- 2. Loss function -----------------------------------------------#
 #----------------------------------------------------------------------------------------------------------#
 '''
-Loss function is a function measures how poor the model perform.
+Loss function is a function measures how poor the model performs.
 The more different between truth and prediction, the higher the loss is
 => The lower the better.
+
+There are many different Loss functions. Which one to use is problem specific.
+
+###########
+
+Loss functions live in torch.nn
+https://docs.pytorch.org/docs/stable/nn.html#loss-functions
 '''
+
+'''Setup a loss function: use L1Loss (mean absolute error - MAE)'''
+loss_fn = nn.L1Loss()
+
+print(loss_fn)
+# L1Loss()
 
 
 #------------------------------------------------------------------------------------------------------#
@@ -115,4 +135,32 @@ Optimizer will take into account the loss function and try to optimize it.
 Meaning, it attempts to modify the parameters of the model based on the Loss function.
 => the goal is to achieve the parameter's values where the Loss function is smallest
                                                            (predictions get closest to truth)
+                                                           
+There are many different Optimizers. Which one to use is problem specific.
+
+##################
+
+Optimizers live in torch.optim
+https://docs.pytorch.org/docs/stable/optim.html
+'''
+
+'''Set up an optimizer: use SGD (stochastic gradient descent)'''
+optimizer = torch.optim.SGD(
+    params=model.parameters(), # Parameters of the model that need to be optimized
+    lr=0.001,                  # The higher the learning rate, the more the parameters will be adjusted after every training step
+)
+
+
+#----------------------------------------------------------------------------------------------------------#
+#----------------------------------------- 4. Training Loop -----------------------------------------------#
+#----------------------------------------------------------------------------------------------------------#
+'''
+A couple of things we need in a training loop:
+    0. Loop through the data
+    1. Forward pass: this involes data moving through the 'forward()' method
+    2. Calculate the loss: compare the predictions made by 'forward()' to ground truth values/labels
+    3. Optimizer zero grad
+    4. Loss backward (backpropagation): move backwards through the network 
+                                        to calculate the gradients of each of the model's parameters with respect to the loss
+    5. Optimizer step: use the optimizer to adjust our model's parameters to try and improve the loss
 '''

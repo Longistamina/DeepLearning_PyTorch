@@ -118,23 +118,23 @@ class LinearRegressionModel(nn.Module): # nn.Module is the base class for all ne
 torch.manual_seed(42)
 
 '''Create an instance of the model (this is a subclass of nn.Module)'''
-model_0 = LinearRegressionModel()
+model = LinearRegressionModel()
 
 '''Check out the parameters (must wrap model.parameters() inside a list() to display)'''
-print(list(model_0.parameters()))
+print(list(model.parameters()))
 # [Parameter containing:
 # tensor([0.3367], requires_grad=True), Parameter containing:
 # tensor([0.1288], requires_grad=True)]
 
 '''Use model.state_dict() to display also the names of parameters'''
-print(model_0.state_dict())
+print(model.state_dict())
 # OrderedDict({'coefs': tensor([0.3367]), 'bias': tensor([0.1288])})
 
 '''Use torch.inference_mode() to make pre-training predictions with initial random parameters'''
 X_test, y_test = next(iter(test_set)) # Get X and y from the first batch in test_set
 
 with torch.inference_mode():
-    y_preds = model_0(X_test) # The model will feed X_test into the forward() method to do computing
+    y_preds = model(X_test) # The model will feed X_test into the forward() method to do computing
                               # y_preds = self.coefs*X + self.bias
 print(y_preds)
 # tensor([[2.1659],
