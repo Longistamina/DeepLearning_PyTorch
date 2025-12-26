@@ -30,7 +30,7 @@ X = torch.tensor(
     ).sort(dim=0).values
 
 torch.manual_seed(24)
-X += torch.normal(mean=2.5, std=1, size=(200, 1)) # Add variation
+X += torch.normal(mean=2.5, std=1, size=(200, 1), device=device) # Add variation
 
 #################################
 ## Create y in ascending order ##
@@ -44,7 +44,7 @@ y = torch.tensor(
     ).sort(dim=0).values
 
 torch.manual_seed(25)
-y += torch.normal(mean=10, std=1, size=(200,)) # Add variation
+y += torch.normal(mean=10, std=1, size=(200,), device=device) # Add variation
 
 ##########################
 ## Train-Val-Test split ##
@@ -134,7 +134,7 @@ https://docs.pytorch.org/docs/stable/optim.html
 '''Set up an optimizer: use SGD (stochastic gradient descent)'''
 optimizer = torch.optim.SGD(
     params=model.parameters(), # Parameters of the model that need to be optimized
-    lr=2e-5,                   # The higher the learning rate, the more the parameters will be adjusted after every training step
+    lr=0.1,                    # The higher the learning rate, the more the parameters will be adjusted after every training step
 )
 
 
@@ -187,32 +187,32 @@ for epoch in range(epochs):
 '''
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 1
-Loss: 119.46
+Loss: 21.40
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 2
-Loss: 114.42
+Loss: 20.59
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 3
-Loss: 112.00
+Loss: 20.63
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 4
-Loss: 112.14
+Loss: 21.29
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 5
-Loss: 115.46
+Loss: 18.55
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 6
-Loss: 112.91
+Loss: 18.27
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 7
-Loss: 116.80
+Loss: 15.72
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 8
-Loss: 113.67
+Loss: 23.74
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 9
-Loss: 117.41
+Loss: 14.79
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 10
-Loss: 117.88
+Loss: 17.13
 '''

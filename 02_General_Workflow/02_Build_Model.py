@@ -28,7 +28,7 @@ X = torch.tensor(
     ).sort(dim=0).values
 
 torch.manual_seed(24)
-X += torch.normal(mean=2.5, std=1, size=(200, 1)) # Add variation
+X += torch.normal(mean=2.5, std=1, size=(200, 1), device=device) # Add variation
 
 #################################
 ## Create y in ascending order ##
@@ -42,7 +42,7 @@ y = torch.tensor(
     ).sort(dim=0).values
 
 torch.manual_seed(25)
-y += torch.normal(mean=10, std=1, size=(200,)) # Add variation
+y += torch.normal(mean=10, std=1, size=(200,), device=device) # Add variation
 
 ##########################
 ## Train-Val-Test split ##
