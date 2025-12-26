@@ -90,6 +90,9 @@ torch.manual_seed(42)
 model = LinearRegressionModel()
 model.to(device)
 
+print(model.state_dict()) # parameters before training
+# OrderedDict({'coefs': tensor([0.3367], device='cuda:0'), 'bias': tensor([0.1288], device='cuda:0')})
+
 
 #----------------------------------------------------------------------------------------------------------#
 #----------------------------------------- 1. Loss function -----------------------------------------------#
@@ -134,7 +137,7 @@ https://docs.pytorch.org/docs/stable/optim.html
 '''Set up an optimizer: use SGD (stochastic gradient descent)'''
 optimizer = torch.optim.SGD(
     params=model.parameters(), # Parameters of the model that need to be optimized
-    lr=0.1,                    # The higher the learning rate, the more the parameters will be adjusted after every training step
+    lr=0.25,                   # The higher the learning rate, the more the parameters will be adjusted after every training step
 )
 
 
