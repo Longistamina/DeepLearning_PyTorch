@@ -178,10 +178,14 @@ print(df_preds_test)
 import matplotlib.pyplot as plt
 import seaborn as sbn
 
-sbn.scatterplot(x=X_test.squeeze().cpu().numpy(), y=df_preds_test['y_test'], label='y_test')
-sbn.scatterplot(x=X_test.squeeze().cpu().numpy(), y=df_preds_test['y_preds'], label='y_preds')
-plt.xlabel("X")
-plt.ylabel('y')
+sbn.set_style("darkgrid")
+sbn.scatterplot(x=X_test.squeeze().cpu().numpy(), y=df_preds_test['y_test'], label='y_test', s=200)
+sbn.scatterplot(x=X_test.squeeze().cpu().numpy(), y=df_preds_test['y_preds'], label='y_preds', s=200)
+plt.xlabel(xlabel="X", fontsize=20)
+plt.ylabel(ylabel='y', fontsize=20)
+plt.xticks(fontsize=15)
+plt.yticks(fontsize=15)
+plt.legend(fontsize=20, loc='upper left')
 plt.show()
 
 '''

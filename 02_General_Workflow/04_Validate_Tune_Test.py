@@ -266,12 +266,12 @@ df = pd.DataFrame({
 })
 
 # Set the visual style
-sbn.set_theme(style="whitegrid")
+sbn.set_theme(style="darkgrid")
 plt.figure(figsize=(10, 6))
 
 # Plot the Actual Data points
 sbn.scatterplot(data=df, x='Input (X)', y='Actual (y)', 
-                color='royalblue', label='Actual Test Data', alpha=0.7)
+                color='royalblue', label='Actual Test Data', alpha=0.7, s=100)
 
 # Plot the Model's Prediction line
 # We sort by X to ensure the line draws smoothly from left to right
@@ -279,7 +279,13 @@ sbn.lineplot(data=df.sort_values('Input (X)'), x='Input (X)', y='Predicted (y)',
              color='crimson', label='Model Prediction (Linear Regression)', linewidth=2.5)
 
 # Customizing the layout
-plt.title("Model Evaluation: Predictions vs. Ground Truth", fontsize=15)
+plt.title("Model Evaluation: Predictions vs. Ground Truth (PyTorch)", fontsize=15)
+plt.xlabel(xlabel='Input (X)', fontsize=20)
+plt.ylabel(ylabel='Output (y)', fontsize=20)
+plt.xticks(fontsize=15)
+plt.yticks(fontsize=15)
+plt.xlim(3, 16)
+plt.ylim(0, 170)
 plt.legend()
 plt.show()
 
@@ -319,12 +325,11 @@ df = pd.DataFrame({
 })
 
 # Set the visual style
-sbn.set_theme(style="whitegrid")
-plt.figure(figsize=(10, 6))
+sbn.set_theme(style="darkgrid")
 
 # Plot the Actual Data points
 sbn.scatterplot(data=df, x='Input (X)', y='Actual (y)', 
-                color='royalblue', label='Actual Test Data', alpha=0.7)
+                color='royalblue', label='Actual Test Data', alpha=0.7, s=100)
 
 # Plot the Model's Prediction line
 # We sort by X to ensure the line draws smoothly from left to right
@@ -332,7 +337,13 @@ sbn.lineplot(data=df.sort_values('Input (X)'), x='Input (X)', y='Predicted (y)',
              color='crimson', label='Model Prediction (Linear Regression)', linewidth=2.5)
 
 # Customizing the layout
-plt.title("Model Evaluation: Predictions vs. Ground Truth", fontsize=15)
+plt.title("Model Evaluation: Predictions vs. Ground Truth (sklearn)", fontsize=15)
+plt.xlabel(xlabel='Input (X)', fontsize=20)
+plt.ylabel(ylabel='Output (y)', fontsize=20)
+plt.xticks(fontsize=15)
+plt.yticks(fontsize=15)
+plt.xlim(3, 16)
+plt.ylim(0, 170)
 plt.legend()
 plt.show()
 

@@ -3,3 +3,8 @@ https://www.youtube.com/watch?v=LyJtbe__2i0
 https://www.learnpytorch.io/
 
 git add .; git commit -m "minor changes"; git push origin; git push github
+
+###########################
+
+DDPM for 2D point cloud
+https://liorsinai.github.io/machine-learning/2022/12/03/denoising-diffusion-1-spiral.html
