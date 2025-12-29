@@ -18,10 +18,11 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 #----------------------------------------- 0. Prepare Data and Model  -----------------------------------------------#
 #--------------------------------------------------------------------------------------------------------------------#
 
-#################################
-## Create X in ascending order ##
-#################################
+#####################
+## Data simulation ##
+#####################
 
+#---- X -----
 np.random.seed(24)
 X = torch.tensor(
         np.random.uniform(low=1, high=11, size=(200, 1)),
@@ -32,10 +33,7 @@ X = torch.tensor(
 torch.manual_seed(24)
 X += torch.normal(mean=2.5, std=1, size=(200, 1), device=device) # Add variation
 
-#################################
-## Create y in ascending order ##
-#################################
-
+#---- y -----
 np.random.seed(25)
 y = torch.tensor(
         np.random.uniform(low=100, high=150, size=(200,)),
@@ -53,9 +51,6 @@ y += torch.normal(mean=10, std=1, size=(200,), device=device) # Add variation
 train_len = int(0.7 * len(X)) # MUST be INTEGER
 val_len = int(0.15 * len(X))
 test_len = len(X) - (train_len + val_len)
-
-print(train_len, val_len, test_len)
-# 140 30 30
 
 from torch.utils.data import DataLoader, TensorDataset, random_split
 

@@ -18,10 +18,11 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 #-------------------------------------- 0. Data Prepare, Model building and Training --------------------------------------------#
 #--------------------------------------------------------------------------------------------------------------------------------#
 
-#################################
-## Create X in ascending order ##
-#################################
+#####################
+## Data simulation ##
+#####################
 
+#---- X -----
 np.random.seed(24)
 X = torch.tensor(
         np.random.uniform(low=1, high=11, size=(200, 1)),
@@ -32,10 +33,7 @@ X = torch.tensor(
 torch.manual_seed(24)
 X += torch.normal(mean=2.5, std=1, size=(200, 1), device=device) # Add variation
 
-#################################
-## Create y in ascending order ##
-#################################
-
+#---- y -----
 np.random.seed(25)
 y = torch.tensor(
         np.random.uniform(low=100, high=150, size=(200,)),
@@ -157,6 +155,14 @@ torch.save(obj=model.state_dict(), f=MODEL_PATH.joinpath(PARAMS_NAME))
 Since we saved only the model's state_dict, we need to create a new instance of the model class first,
 then load the saved state_dict into this new instance.
 '''
+
+from pathlib import Path
+
+MODEL_PATH = Path("02_General_Workflow").joinpath("save")
+MODEL_PATH.mkdir(parents=True, exist_ok=True)
+
+# PyTorch model can be saved in .pth or .pt format
+PARAMS_NAME = "LinearRegression_StateDict.pth"
 
 # Create a new instance of the model class
 loaded_model = LinearRegressionModel()
