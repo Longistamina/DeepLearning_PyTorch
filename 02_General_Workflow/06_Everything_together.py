@@ -76,12 +76,19 @@ from torch import nn
 class LinearRegressionModel(nn.Module):  
     def __init__(self):
         super().__init__()
-        self.coefs = nn.Parameter(torch.randn(size=(1, ), requires_grad=True, dtype=torch.float32)) # initialize self.coefs as a random number
-        self.bias = nn.Parameter(torch.randn(size=(1, ), requires_grad=True, dtype=torch.float32)) # initialize self.bias as a random number
+        self.linear_layer = nn.Linear(in_features=1, out_features=1)
+        '''
+        nn.Linear: applies an affine linear transformation y = xAᵀ + b
+        in_features: the number of input features (Our X has only 1 column, i.e 1D vector -> in_features = 1)
+        out_features: the number of output features (Our y is also a 1D vector -> out_features = 1)
+        '''
+        # self.coefs = nn.Parameter(torch.randn(size=(1, ), requires_grad=True, dtype=torch.float32))
+        # self.bias = nn.Parameter(torch.randn(size=(1, ), requires_grad=True, dtype=torch.float32))
         
         
     def forward(self, X: torch.Tensor) -> torch.Tensor:
-        return self.coefs*X + self.bias
+        return self.linear_layer(X)
+        # return self.coefs*X + self.bias
     
 ##################
 ## Define model ##
@@ -92,7 +99,7 @@ model = LinearRegressionModel()
 model.to(device)
 
 print(f'\nParameters before training:\n{model.state_dict()}') # Parameters before training
-# OrderedDict({'coefs': tensor([0.3367], device='cuda:0'), 'bias': tensor([0.1288], device='cuda:0')})
+# OrderedDict({'linear_layer.weight': tensor([[0.7645]], device='cuda:0'), 'linear_layer.bias': tensor([0.8300], device='cuda:0')})
 
 ##########
 ## Loss ##
@@ -106,7 +113,7 @@ loss_fn = nn.MSELoss() # mean squared error
 
 optimizer = torch.optim.Adam(
     params=model.parameters(), 
-    lr=9.3,
+    lr=11.6
 )
 
 ################################
@@ -150,48 +157,48 @@ for epoch in range(epochs):
 '''
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 1
-Train loss: 2364.0293
-Validation loss: 3680.6317
+Train loss: 3835.8940
+Validation loss: 2947.0026
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 2
-Train loss: 3459.6724
-Validation loss: 2119.7612
+Train loss: 338.6355
+Validation loss: 404.5150
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 3
-Train loss: 409.0802
-Validation loss: 317.3638
+Train loss: 333.9245
+Validation loss: 576.4692
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 4
-Train loss: 354.7455
-Validation loss: 328.5134
+Train loss: 108.6674
+Validation loss: 174.4145
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 5
-Train loss: 252.1030
-Validation loss: 231.5259
+Train loss: 113.9557
+Validation loss: 81.7076
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 6
-Train loss: 25.2443
-Validation loss: 85.0192
+Train loss: 94.9725
+Validation loss: 40.6029
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 7
-Train loss: 75.0284
-Validation loss: 71.7913
+Train loss: 20.5368
+Validation loss: 31.8919
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 8
-Train loss: 38.7094
-Validation loss: 49.6114
+Train loss: 8.6370
+Validation loss: 33.2744
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 9
-Train loss: 6.6849
-Validation loss: 40.4321
+Train loss: 41.5429
+Validation loss: 55.9340
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 10
-Train loss: 29.3571
-Validation loss: 35.8692
+Train loss: 25.2029
+Validation loss: 30.3460
 '''
 
 print(f'\nParameters after training:\n{model.state_dict()}') # Parameters after training
-# OrderedDict({'coefs': tensor([4.9168], device='cuda:0'), 'bias': tensor([93.1045], device='cuda:0')})
+# OrderedDict({'linear_layer.weight': tensor([[4.1690]], device='cuda:0'), 'linear_layer.bias': tensor([97.2315], device='cuda:0')})
 
 #######################################
 ## 6. Draw Train and Val loss curves ##
@@ -253,7 +260,7 @@ with torch.inference_mode():
         test_loss += loss_fn(test_preds, y_test.unsqueeze(1)).item()
 
 print(f"Final Test Loss: {test_loss / len(test_set):.4f}")
-# Final Test Loss: 39.2411
+# Final Test Loss: 24.9976
 
 ###############
 ## 8. Saving ##
