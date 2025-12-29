@@ -7,7 +7,7 @@ This file puts all the steps into a complete workflow:
 3. Loss
 4. Optimizer
 5. Training - Validating loop
-6. Draw Train and Val loss curves
+6. Drawing Train and Val loss curves
 7. Testing
 8. Saving model (model.state_dict() only)
 9. Loading model (model.state_dict() only)
@@ -176,9 +176,9 @@ Validation loss: 30.3460
 print(f'\nParameters after training:\n{model.state_dict()}') # Parameters after training
 # OrderedDict({'linear_layer.weight': tensor([[4.1690]], device='cuda:0'), 'linear_layer.bias': tensor([97.2315], device='cuda:0')})
 
-#######################################
-## 6. Draw Train and Val loss curves ##
-#######################################
+##########################################
+## 6. Drawing Train and Val loss curves ##
+##########################################
 
 def plot_train_val_loss_curves():
     import plotly.graph_objects as pgo
