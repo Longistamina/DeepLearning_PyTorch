@@ -1,5 +1,5 @@
 '''
-This file put all the steps into a complete workflow:
+This file puts all the steps into a complete workflow:
 
 0. Data simulation
 1. Dataset splitting
@@ -49,15 +49,12 @@ torch.manual_seed(25)
 y += torch.normal(mean=10, std=1, size=(200,), device=device) # Add variation
 
 ##########################
-## Train-Val-Test split ##
+## 1. Dataset splitting ##
 ##########################
 
 train_len = int(0.7 * len(X)) # MUST be INTEGER
 val_len = int(0.15 * len(X))
 test_len = len(X) - (train_len + val_len)
-
-print(train_len, val_len, test_len)
-# 140 30 30
 
 from torch.utils.data import DataLoader, TensorDataset, random_split
 
@@ -68,9 +65,9 @@ train_set = DataLoader(train_split, batch_size=16, shuffle=True)
 val_set = DataLoader(val_split, batch_size=16, shuffle=True)
 test_set = DataLoader(test_split, batch_size=16, shuffle=True)
 
-#################
-## Build model ##
-#################
+#######################
+## 2. Model building ##
+#######################
 
 from torch import nn
 
@@ -91,10 +88,7 @@ class LinearRegressionModel(nn.Module):
         return self.linear_layer(X)
         # return self.coefs*X + self.bias
     
-##################
-## Define model ##
-##################
-
+'''Call out a model as an instance of a class'''
 torch.manual_seed(42)
 model = LinearRegressionModel()
 model.to(device)
@@ -102,24 +96,24 @@ model.to(device)
 print(f'\nParameters before training:\n{model.state_dict()}') # Parameters before training
 # OrderedDict({'linear_layer.weight': tensor([[0.7645]], device='cuda:0'), 'linear_layer.bias': tensor([0.8300], device='cuda:0')})
 
-##########
-## Loss ##
-##########
+#############
+## 3. Loss ##
+#############
 
 loss_fn = nn.MSELoss() # mean squared error
 
-###############
-## Optimizer ##
-###############
+##################
+## 4. Optimizer ##
+##################
 
 optimizer = torch.optim.Adam(
     params=model.parameters(), 
     lr=11.6
 )
 
-################################
-## Training - Validating loop ##
-################################
+###################################
+## 5. Training - Validating loop ##
+###################################
 
 epochs = 10
 
@@ -155,8 +149,6 @@ for epoch in range(1, epochs+1, 1):
         print(f"Epoch: {epoch}")
         print(f"Train loss: {loss:.4f}")
         print(f"Validation loss: {avg_val_loss:.4f}")
-    
-
     
 '''
 ++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -302,7 +294,7 @@ print(X_new)
 _ = loaded_model.eval() # Turn off gradient tracking
 
 with torch.inference_mode():
-    y_inferenced = loaded_model(X_new)
+    y_inference = loaded_model(X_new)
     
 print(y_inference)
 # tensor([[136.7942],
