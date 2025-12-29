@@ -34,6 +34,8 @@
 9. Quantile:
    + torch.quantile(tensor)
    + tensor.quantile()
+
+NOTE: output.values to get the tensor values only
 '''
 
 import torch
@@ -249,3 +251,22 @@ print(torch.quantile(tensor_Mb, q=q_vals, dim=0)) # quantile vertically
 print(torch.quantile(tensor_Mb, q=q_vals, dim=1)) # quantile horizontally
 # tensor([[ 4.0000, 10.2500,  5.5000,  3.2500,  5.5000,  2.5000],    Q1 array
 #         [17.0000, 17.0000, 11.5000, 12.7500, 16.7500, 11.5000]])   Q3 array
+
+
+#----------------------------------------------------------------------------------------------------------------#
+#--------------------------- NOTE: output.values to get the tensor values only ----------------------------------#
+#----------------------------------------------------------------------------------------------------------------#
+
+'''Some functions/methods return a tuple containing many components like below:'''
+print(torch.median(tensor_M, dim=0)) # median vertically
+# torch.return_types.median(
+# values=tensor([2.0000, 1.0000, 4.0000, 6.2000]),
+# indices=tensor([0, 1, 0, 1]))
+
+'''In this case, we can se .values to get the oficial output only'''
+print(torch.median(tensor_M, dim=0).values)
+# tensor([2.0000, 1.0000, 4.0000, 6.2000])
+
+tensor_output = torch.median(tensor_M, dim=0).values
+print(tensor_output)
+# tensor([2.0000, 1.0000, 4.0000, 6.2000])

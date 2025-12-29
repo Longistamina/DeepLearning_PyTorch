@@ -14,6 +14,8 @@
 4. ArgMax:
    + torch.argmax(tensor)
    + tensor.argmax()
+   
+NOTE: output.values to get the tensor values only
 '''
 
 import torch
@@ -223,3 +225,34 @@ print(torch.argmax(tensor_M, dim=1)) # Find ArgMax horizontally
 
 print(tensor_M.argmax(dim=0)) # # Find ArgMax vertically
 # tensor([3, 0, 2, 2, 1, 0, 1])
+
+
+#----------------------------------------------------------------------------------------------------------------#
+#--------------------------- NOTE: output.values to get the tensor values only ----------------------------------#
+#----------------------------------------------------------------------------------------------------------------#
+
+'''Some functions/methods return a tuple containing many components like below:'''
+print(tensor_M.sort(dim=0, descending=True)) # sort vertically
+# torch.return_types.sort(
+# values=tensor([[10, 10,  7,  9,  7, 10, 10],
+#         [ 9,  8,  5,  5,  5, 10, 10],
+#         [ 5,  7,  4,  2,  4,  7,  8],
+#         [ 4,  2,  4,  1,  2,  4,  7]]),
+# indices=tensor([[3, 0, 2, 2, 1, 0, 1],
+#         [2, 1, 3, 3, 2, 3, 3],
+#         [0, 2, 0, 1, 0, 1, 0],
+#         [1, 3, 1, 0, 3, 2, 2]]))
+
+'''In this case, we can se .values to get the oficial output only'''
+print(tensor_M.sort(dim=0, descending=True).values)
+# tensor([[10, 10,  7,  9,  7, 10, 10],
+#         [ 9,  8,  5,  5,  5, 10, 10],
+#         [ 5,  7,  4,  2,  4,  7,  8],
+#         [ 4,  2,  4,  1,  2,  4,  7]])
+
+tensor_output = tensor_M.sort(dim=0, descending=True).values
+print(tensor_output)
+# tensor([[10, 10,  7,  9,  7, 10, 10],
+#         [ 9,  8,  5,  5,  5, 10, 10],
+#         [ 5,  7,  4,  2,  4,  7,  8],
+#         [ 4,  2,  4,  1,  2,  4,  7]])
