@@ -11,6 +11,7 @@ This file put all the steps into a complete workflow:
 7. Testing
 8. Saving model (model.state_dict() only)
 9. Loading model (model.state_dict() only)
+10. Inference (prediction)
 '''
 
 import torch
@@ -276,3 +277,36 @@ loaded_model.to(device)
 loaded_model.load_state_dict(torch.load(MODEL_PATH.joinpath(PARAMS_NAME)))
 # <All keys matched successfully>
 
+################################
+## 10. Inference (prediction) ##
+################################
+
+'''Create new input'''
+import numpy as np
+
+torch.manual_seed(43)
+X_new = torch.tensor(
+    np.random.uniform(low=1, high=11, size=(5, 1)),
+    dtype=torch.float32,
+    device=device
+)
+    
+print(X_new)
+# tensor([[9.4897],
+#         [4.1944],
+#         [4.1960],
+#         [3.6032],
+#         [5.2499]], device='cuda:0')
+
+'''Inference'''
+_ = loaded_model.eval() # Turn off gradient tracking
+
+with torch.inference_mode():
+    y_inferenced = loaded_model(X_new)
+    
+print(y_inference)
+# tensor([[136.7942],
+#         [114.7179],
+#         [114.7247],
+#         [112.2534],
+#         [119.1184]], device='cuda:0')

@@ -6,6 +6,8 @@
 2. Load Model: torch.load() and torch.nn.Module.load_state_dict()
 
 3. Save and Load entire model (less recommended)
+
+4. Inference (prediction)
 '''
 
 import torch
@@ -216,3 +218,38 @@ print(loaded_entire_model)
 
 print(loaded_entire_model.state_dict())
 # OrderedDict({'coefs': tensor([9.3961], device='cuda:0'), 'bias': tensor([18.0144], device='cuda:0')})
+
+
+#----------------------------------------------------------------------------------------------------------------------#
+#-------------------------------------------- 4. Inference (prediction) -----------------------------------------------#
+#----------------------------------------------------------------------------------------------------------------------#
+
+'''Create new input'''
+import numpy as np
+
+torch.manual_seed(43)
+X_new = torch.tensor(
+    np.random.uniform(low=1, high=11, size=(5, 1)),
+    dtype=torch.float32,
+    device=device
+)
+    
+print(X_new)
+# tensor([[9.4897],
+#         [4.1944],
+#         [4.1960],
+#         [3.6032],
+#         [5.2499]], device='cuda:0')
+
+'''Inference'''
+_ = loaded_model.eval() # Turn off gradient tracking
+
+with torch.inference_mode():
+    y_inference = loaded_model(X_new)
+    
+print(y_inference)
+# tensor([[107.1804],
+#         [ 57.4251],
+#         [ 57.4404],
+#         [ 51.8707],
+#         [ 67.3430]], device='cuda:0')
