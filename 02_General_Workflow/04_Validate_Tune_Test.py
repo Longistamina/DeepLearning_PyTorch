@@ -119,6 +119,8 @@ optimizer = torch.optim.SGD(
 
 epochs = 10
 
+train_loss_list, val_loss_list = [], []
+
 for epoch in range(epochs):
     print("+"*50)
     # --- TRAINING ---
@@ -145,6 +147,9 @@ for epoch in range(epochs):
     print(f"Epoch: {epoch + 1}")
     print(f"Train loss: {loss:.4f}")
     print(f"Validation loss: {avg_val_loss:.4f}")
+    
+    train_loss_list.append(loss.item())
+    val_loss_list.append(avg_val_loss)
     
 '''
 ++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -191,6 +196,53 @@ Validation loss: 646.2153
 
 print(model.state_dict()) # Parameters after training
 # OrderedDict({'coefs': tensor([11.2700], device='cuda:0'), 'bias': tensor([17.9875], device='cuda:0')})
+
+#####################################
+## Draw Train loss Val loss curves ##
+#####################################
+
+def plot_train_val_loss_curves():
+    import plotly.graph_objects as pgo
+    import numpy as np
+    
+    # 1. Define the X-axis (epochs)
+    epoch_axis = np.arange(1, epochs + 1, 1)
+
+    fig = pgo.Figure()
+
+    # 2. Add Training Loss
+    fig.add_trace(pgo.Scatter(
+        x=epoch_axis,
+        y=train_loss_list,
+        mode='lines+markers',
+        name='Train Loss',
+        line=dict(color='#1f77b4', width=3),
+        marker=dict(size=8)
+    ))
+
+    # 3. Add Validation Loss
+    fig.add_trace(pgo.Scatter(
+        x=epoch_axis,
+        y=val_loss_list,
+        mode='lines+markers',
+        name='Val Loss',
+        line=dict(color='#ff7f0e', width=3, dash='dash'),
+        marker=dict(size=8, symbol='square')
+    ))
+
+    # 4. Layout & Styling
+    fig.update_layout(
+        title='<b>Model Training Progress</b>',
+        xaxis_title='Epoch',
+        yaxis_title='Loss Value',
+        template='plotly_white', # Clean white background
+        hovermode='x unified',   # Shows both values on hover
+        legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99)
+    )
+
+    fig.show()
+    
+plot_train_val_loss_curves()
 
 
 #----------------------------------------------------------------------------------------------------------------------------------#
