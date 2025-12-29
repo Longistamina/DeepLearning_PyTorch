@@ -76,7 +76,7 @@ from torch import nn
 class LinearRegressionModel(nn.Module):  
     def __init__(self):
         super().__init__()
-        self.linear_layer = nn.Linear(in_features=1, out_features=1)
+        self.linear_layer = nn.Linear(in_features=1, out_features=1, bias=True) # bias=True by default
         '''
         nn.Linear: applies an affine linear transformation y = xAᵀ + b
         in_features: the number of input features (Our X has only 1 column, i.e 1D vector -> in_features = 1)
