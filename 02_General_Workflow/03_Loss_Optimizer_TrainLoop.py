@@ -154,7 +154,7 @@ A couple of things we need in a training loop:
 epochs = 10
 
 # 0. Loop through the data
-for epoch in range(epochs):
+for epoch in range(1, epochs+1, 1):
     
     # Set model to training mode (set all params that require gradients to require gradients)
     _ = model.train() # Assign to '_' to hide the class name printout
@@ -179,7 +179,7 @@ for epoch in range(epochs):
     
     # Print out the loss of each epoch (to see how the loss descends)
     print("+"*50)
-    print(f"Epoch: {epoch + 1}")
+    print(f"Epoch: {epoch}")
     print(f"Loss: {loss:.2f}")
 
 '''

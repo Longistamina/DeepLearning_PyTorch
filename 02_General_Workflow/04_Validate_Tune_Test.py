@@ -116,7 +116,7 @@ epochs = 10
 
 train_loss_list, val_loss_list = [], []
 
-for epoch in range(epochs):
+for epoch in range(1, epochs+1, 1):
     # --- TRAINING ---
     _ = model.train() # Turn on training mode, enable gradient tracking
     for X_batch, y_batch in train_set:
@@ -142,7 +142,7 @@ for epoch in range(epochs):
     val_loss_list.append(avg_val_loss)
     
     print("+"*50)
-    print(f"Epoch: {epoch + 1}")
+    print(f"Epoch: {epoch}")
     print(f"Train loss: {loss:.4f}")
     print(f"Validation loss: {avg_val_loss:.4f}")
     
