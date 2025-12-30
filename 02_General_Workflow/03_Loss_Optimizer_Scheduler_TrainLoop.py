@@ -3,7 +3,7 @@
 
 1. Loss function
 
-2. Optimizer
+2. Optimizer and lr_Scheduler
 
 3. Training Loop
 '''
@@ -113,7 +113,7 @@ print(loss_fn)
 
 
 #------------------------------------------------------------------------------------------------------#
-#----------------------------------------- 2. Optimizer -----------------------------------------------#
+#-------------------------------- 2. Optimizer and lr_Scheduler ---------------------------------------#
 #------------------------------------------------------------------------------------------------------#
 '''
 Optimizer will take into account the loss function and try to optimize it.
@@ -129,11 +129,26 @@ Optimizers live in torch.optim
 https://docs.pytorch.org/docs/stable/optim.html
 '''
 
-'''Set up an optimizer: use SGD (stochastic gradient descent)'''
+# Set up an optimizer: use SGD (stochastic gradient descent)
 optimizer = torch.optim.SGD(
     params=model.parameters(), # Parameters of the model that need to be optimized
-    lr=0.25,                   # The higher the learning rate, the more the parameters will be adjusted after every training step
+    lr=0.25,                    # The higher the learning rate, the more the parameters will be adjusted after every training step
 )
+
+'''
+A learning rate scheduler in PyTorch is a tool used to dynamically adjust the learning rate during the optimization process 
+to improve model training performance.
+
+###################
+
+lr_scheduler lives in torch.optim.lr_scheduler
+https://docs.pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate
+'''
+
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.9)
+# epoch 1 -> lr=25
+# epoch 2 -> lr=25*0.9
+# epoch 3 -> lr=25*0.9*0.9
 
 
 #----------------------------------------------------------------------------------------------------------#
@@ -176,6 +191,8 @@ for epoch in range(1, epochs+1, 1):
         
         # 5. Optimizer step (perform gradient descent with new calculated step, to adjust the parameters)
         optimizer.step()
+        
+    scheduler.step() # adjust the learning rate after each epoch
     
     # Print out the loss of each epoch (to see how the loss descends)
     print("+"*50)
@@ -185,34 +202,35 @@ for epoch in range(1, epochs+1, 1):
 '''
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 1
-Loss: 21.40
+Loss: 27.08
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 2
-Loss: 20.59
+Loss: 32.38
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 3
-Loss: 20.63
+Loss: 28.92
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 4
-Loss: 21.29
+Loss: 26.44
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 5
-Loss: 18.55
+Loss: 23.59
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 6
-Loss: 18.27
+Loss: 22.43
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 7
-Loss: 15.72
+Loss: 26.97
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 8
-Loss: 23.74
+Loss: 24.82
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 9
-Loss: 14.79
+Loss: 30.90
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 10
-Loss: 17.13
+Loss: 32.37
+OrderedDict({'coefs': tensor([13.4301], device='cuda:0'), 'bias': tensor([5.2612], device='cuda:0')})
 '''
 
 print(model.state_dict()) # Parameters after training

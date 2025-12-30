@@ -34,13 +34,13 @@ X += torch.normal(mean=2.5, std=1, size=(200, 1), device=device) # Add variation
 #---- y -----
 np.random.seed(25)
 y = torch.tensor(
-        np.random.uniform(low=100, high=150, size=(200,)),
+        np.random.uniform(low=100, high=150, size=(200, 1)),
         dtype=torch.float32,
         device=device
     ).sort(dim=0).values
 
 torch.manual_seed(25)
-y += torch.normal(mean=10, std=1, size=(200,), device=device) # Add variation
+y += torch.normal(mean=10, std=1, size=(200, 1), device=device) # Add variation
 
 ##########################
 ## Train-Val-Test split ##
@@ -145,7 +145,7 @@ import polars as pl
 df_preds_test = pl.DataFrame(
     {
         "y_preds": y_preds.squeeze().cpu().numpy(),
-        "y_test": y_test.cpu().numpy()
+        "y_test": y_test.squeeze().cpu().numpy()
     }
 )
 
