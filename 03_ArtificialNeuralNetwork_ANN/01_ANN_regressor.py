@@ -175,12 +175,11 @@ for epoch in range(1, epochs+1, 1):
         optimizer.step()
         
     # --- VALIDATION (Every epoch) ---
-    _ = model.eval() # 1. Set model to evaluation mode
+    _ = model.eval() 
     val_loss = 0
-    with torch.inference_mode(): # 2. Turn off gradient tracking to save memory
-        for X_val, y_val in val_set: # 3. Iterate through val_set
+    with torch.inference_mode(): 
+        for X_val, y_val in val_set: 
             val_preds = model(X_val)
-            # Accumulate loss to get an average for the whole set
             val_loss += loss_fn(val_preds, y_val).item()
     
     avg_val_loss = val_loss / len(val_set)
