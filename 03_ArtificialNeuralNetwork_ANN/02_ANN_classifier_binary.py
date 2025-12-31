@@ -162,10 +162,10 @@ loss_fn = nn.BCELoss() # Binary Cross-Entropy loss
 
 optimizer = torch.optim.Adam(
     params=model.parameters(), 
-    lr=0.001
+    lr=1
 )
 
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
 ################################
 ## Training - Validating loop ##
@@ -208,44 +208,44 @@ for epoch in range(1, epochs+1, 1):
 '''
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 10
-Train loss: 3.624e-01
-Validation loss: 3.195e-01
+Train loss: 5.122e-01
+Validation loss: 3.773e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 20
-Train loss: 4.203e-01
-Validation loss: 3.122e-01
+Train loss: 4.507e-01
+Validation loss: 3.374e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 30
-Train loss: 2.355e-01
-Validation loss: 3.129e-01
+Train loss: 3.235e-01
+Validation loss: 3.325e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 40
-Train loss: 2.529e-01
-Validation loss: 3.047e-01
+Train loss: 2.940e-01
+Validation loss: 3.311e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 50
-Train loss: 2.859e-01
-Validation loss: 3.066e-01
+Train loss: 3.273e-01
+Validation loss: 3.603e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 60
-Train loss: 2.614e-01
-Validation loss: 3.117e-01
+Train loss: 5.061e-01
+Validation loss: 3.284e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 70
-Train loss: 2.975e-01
-Validation loss: 3.122e-01
+Train loss: 5.282e-01
+Validation loss: 3.283e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 80
-Train loss: 3.380e-01
-Validation loss: 3.102e-01
+Train loss: 3.572e-01
+Validation loss: 3.310e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 90
-Train loss: 2.273e-01
-Validation loss: 3.113e-01
+Train loss: 3.037e-01
+Validation loss: 3.292e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 100
-Train loss: 3.522e-01
-Validation loss: 3.091e-01
+Train loss: 3.575e-01
+Validation loss: 3.400e-01
 '''
 
 #######################################
@@ -319,7 +319,7 @@ with torch.inference_mode():
 # Calculate average test loss
 avg_test_loss = test_loss / len(test_set)
 print(f"Average Test Loss: {avg_test_loss:.4f}\n")
-# Average Test Loss: 0.3045
+# Average Test Loss: 0.3241
 
 # Concatenate all batches
 test_preds_proba = torch.cat(test_preds_list, dim=0).cpu().numpy()  # Probabilities
@@ -334,7 +334,7 @@ import pandas as pd
 
 accuracy = accuracy_score(test_true, test_preds_class)
 print(f'Accuracy on test set: {accuracy:.4f}\n')
-# Accuracy on test set: 0.8555
+# Accuracy on test set: 0.8538
 
 # Confusion Matrix
 labels = ['<=50K', '>50K']  # Adjust based on your dataset
@@ -344,20 +344,20 @@ cm_df = pd.DataFrame(cm, index=labels, columns=labels)
 print(f'Confusion matrix:\n{cm_df}\n')
 # Confusion matrix:
 #        <=50K  >50K
-# <=50K   3471   243
-# >50K     463   708
+# <=50K   3527   179
+# >50K     535   644
 
 # Classification Report
 print(f'Classification report:\n{classification_report(test_true, test_preds_class, target_names=labels)}\n')
 # Classification report:
 #               precision    recall  f1-score   support
 
-#        <=50K       0.88      0.93      0.91      3714
-#         >50K       0.74      0.60      0.67      1171
+#        <=50K       0.87      0.95      0.91      3706
+#         >50K       0.78      0.55      0.64      1179
 
-#     accuracy                           0.86      4885
-#    macro avg       0.81      0.77      0.79      4885
-# weighted avg       0.85      0.86      0.85      4885
+#     accuracy                           0.85      4885
+#    macro avg       0.83      0.75      0.78      4885
+# weighted avg       0.85      0.85      0.84      4885
 
 ###############################
 ## Visualization with Plotly ##
