@@ -1,5 +1,6 @@
 '''
-
+This code shows how to write an ANN to predict the covertype (7 classes),
+other remaining features are used for training
 '''
 
 import torch
@@ -26,6 +27,6 @@ from ucimlrepo import fetch_ucirepo
 covertype = fetch_ucirepo(id=31) 
   
 # data (as pandas dataframes) 
-X = covertype.data.features 
-y = covertype.data.targets
+X_raw = covertype.data.features 
+y_raw = covertype.data.targets
 '''Wait a little bit for it to fetch the data'''

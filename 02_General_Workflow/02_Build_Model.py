@@ -56,8 +56,8 @@ full_dataset = TensorDataset(X, y)
 train_split, val_split, test_split = random_split(dataset=full_dataset, lengths=[train_len, val_len, test_len])
 
 train_set = DataLoader(train_split, batch_size=16, shuffle=True)
-val_set = DataLoader(val_split, batch_size=16, shuffle=True)
-test_set = DataLoader(test_split, batch_size=16, shuffle=True)
+val_set = DataLoader(val_split, batch_size=16, shuffle=False)
+test_set = DataLoader(test_split, batch_size=16, shuffle=False)
 
 
 #-----------------------------------------------------------------------------------------------------------#

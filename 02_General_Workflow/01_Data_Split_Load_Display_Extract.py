@@ -122,8 +122,8 @@ print(train_split, val_split, test_split)
 ########################################
 
 train_set = DataLoader(train_split, batch_size=16, shuffle=True) # shuffle=True to reshuffle the data after every epoch
-val_set = DataLoader(val_split, batch_size=16, shuffle=True)
-test_set = DataLoader(test_split, batch_size=16, shuffle=True)
+val_set = DataLoader(val_split, batch_size=16, shuffle=False)
+test_set = DataLoader(test_split, batch_size=16, shuffle=False)
 
 '''
 Batch size refers to the number of training examples used in one single "iteration"
@@ -223,27 +223,13 @@ print(batch_y)
 print(batch_x.shape) # torch.Size([16, 1])
 print(batch_y.shape) # torch.Size([16])
 
-############################################################
-## Extract X_train, y_train, X_val, y_val, X_test, y_test ##
-############################################################
+###################################################
+## Use X[_split.indices] to get the whole _split ##
+###################################################
 
-def extract_values(dataset):
-    import numpy as np
-    X_list, y_list = [], []
-    
-    for batch in dataset:
-        X_batch, y_batch = batch
-        X_list.append(X_batch.reshape(-1).numpy())
-        y_list.append(y_batch.cpu().numpy())
-        
-        X_arr = np.concatenate(X_list) # convert list of X_bactch into ndarray
-        y_arr = np.concatenate(y_list) # convert list of y_bactch into ndarray
 
-        return X_arr, y_arr
-
-############
-
-X_test, y_test = extract_values(test_set)
+X_test = X[test_split.indices]
+y_test = y[test_split.indices]
 
 print(X_test)
 # [ 6.0502653 12.6057005  7.968792   5.7329483 10.716923   6.956892
