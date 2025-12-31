@@ -367,6 +367,19 @@ print(
 # │ 131399.171875 ┆ 119800.0    │
 # └───────────────┴─────────────┘
 
+import matplotlib.pyplot as plt
+import seaborn as sbn
+
+y_test = test_targets_original.squeeze()
+y_test_pred = test_preds_original.squeeze()
+
+sbn.set_theme(style='darkgrid')
+sbn.lineplot(x = [y_test.min(), y_test.max()], y = [y_test.min(), y_test.max()], label = 'Reference line', color = 'green')
+sbn.scatterplot(x = y_test, y = y_test_pred)
+plt.xlabel("Y_test_true", size=15)
+plt.ylabel("Y_test_predict", size=15)
+plt.show()
+
 ############
 ## Saving ##
 ############
