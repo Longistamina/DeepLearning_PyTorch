@@ -5,7 +5,12 @@ other remaining features are used for training
 
 import torch
 
+print(torch.__version__)
+# 2.11.0.dev20251216+cu130
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
+print(device)
+# cuda
 
 ######################
 ## Data preparation ##
@@ -111,7 +116,7 @@ test_set = DataLoader(test_split, batch_size=2**11, shuffle=True)
 
 from torch import nn
 
-class ANNmodel(nn.Module):
+class ANNregressor(nn.Module):
     def __init__(self):
         super().__init__()
         
@@ -138,7 +143,7 @@ class ANNmodel(nn.Module):
     
 '''Call out a model as an instance of a class'''
 torch.manual_seed(42)
-model = ANNmodel()
+model = ANNregressor()
 model.to(device)
 
 # print(f'\nParameters before training:\n{model.state_dict()}')
