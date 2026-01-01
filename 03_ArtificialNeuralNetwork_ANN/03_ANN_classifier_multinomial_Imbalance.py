@@ -281,7 +281,7 @@ Validation loss: 5.637e-01
 ## Drawing Train and Val loss curves ##
 #######################################
 
-def plot_train_val_loss_curves():
+def plot_train_val_loss_curves(epochs, train_loss_list, val_loss_list):
     import plotly.graph_objects as pgo
     import numpy as np
     
@@ -322,7 +322,7 @@ def plot_train_val_loss_curves():
 
     fig.show()
     
-plot_train_val_loss_curves()
+plot_train_val_loss_curves(epochs, train_loss_list, val_loss_list)
 
 #############
 ## Testing ##

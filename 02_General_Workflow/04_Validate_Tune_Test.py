@@ -192,11 +192,11 @@ Validation loss: 646.2153
 print(model.state_dict()) # Parameters after training
 # OrderedDict({'coefs': tensor([11.2700], device='cuda:0'), 'bias': tensor([17.9875], device='cuda:0')})
 
-#####################################
-## Draw Train loss Val loss curves ##
-#####################################
+#######################################
+## Drawing Train and Val loss curves ##
+#######################################
 
-def plot_train_val_loss_curves():
+def plot_train_val_loss_curves(epochs, train_loss_list, val_loss_list):
     import plotly.graph_objects as pgo
     import numpy as np
     
@@ -237,7 +237,7 @@ def plot_train_val_loss_curves():
 
     fig.show()
     
-plot_train_val_loss_curves()
+plot_train_val_loss_curves(epochs, train_loss_list, val_loss_list)
 
 
 #----------------------------------------------------------------------------------------------------------------------------------#
