@@ -84,6 +84,8 @@ print(y_scaled.shape)
 ## Dataset splitting ##
 #######################
 
+BATCH_SIZE = 2**17
+
 train_len = int(0.8 * len(X_scaled)) # MUST be INTEGER
 val_len = int(0.1 * len(X_scaled))
 test_len = len(X_scaled) - (train_len + val_len)
@@ -93,13 +95,13 @@ from torch.utils.data import DataLoader, TensorDataset, random_split
 full_dataset = TensorDataset(X_scaled, y_scaled)
 train_split, val_split, test_split = random_split(dataset=full_dataset, lengths=[train_len, val_len, test_len])
 
-train_set = DataLoader(train_split, batch_size=2**11, shuffle=True)
-val_set = DataLoader(val_split, batch_size=2**11, shuffle=False)
-test_set = DataLoader(test_split, batch_size=2**11, shuffle=False)
+train_set = DataLoader(train_split, batch_size=BATCH_SIZE, shuffle=True)
+val_set = DataLoader(val_split, batch_size=BATCH_SIZE, shuffle=False)
+test_set = DataLoader(test_split, batch_size=BATCH_SIZE, shuffle=False)
 
-###############################
-## ADSYN to handle imbalance ##
-###############################
+################################
+## ADASYN to handle imbalance ##
+################################
 
 from imblearn.over_sampling import ADASYN
 
@@ -124,16 +126,16 @@ y_train_tensor = torch.tensor(y_train_resampled, dtype=torch.long, device=device
 train_set_resampled = TensorDataset(X_train_tensor, y_train_tensor)
 
 # Create new DataLoader with batches
-train_set = DataLoader(train_set_resampled, batch_size=2**11, shuffle=True)
+train_set = DataLoader(train_set_resampled, batch_size=BATCH_SIZE, shuffle=True)
 
 print(f"✅ New training set created!")
 print(f"   Total samples: {len(X_train_resampled):,}")
-print(f"   Batch size: {2**11}")
+print(f"   Batch size: {BATCH_SIZE}")
 print(f"   Number of batches: {len(train_set)}")
 # ✅ New training set created!
-#    Total samples: 1,588,404
-#    Batch size: 2048
-#    Number of batches: 776
+#    Total samples: 1,588,541
+#    Batch size: 131072
+#    Number of batches: 13
 
 ######################
 ## Model Definition ##
@@ -177,6 +179,7 @@ model = ANNmultinomial(input_features=54, num_classes=7, dropout_rate=0.3)
 model.to(device)
 
 print(f"Total parameters: {sum(p.numel() for p in model.parameters()):,}")
+# Total parameters: 18,055
 
 ###############################
 ## Loss Function & Optimizer ##
@@ -186,14 +189,11 @@ loss_fn = nn.CrossEntropyLoss()
 # Note: We'll need to apply log to model output in training loop
 # OR better: use CrossEntropyLoss without Softmax in model
 
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
 
 # Optional: Learning rate scheduler for better convergence
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
-
-print(f"Device: {device}")
-print(f"Learning rate: 0.001")
+scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=5)
 
 ################################
 ## Training - Validating loop ##
@@ -237,44 +237,34 @@ for epoch in range(1, epochs+1, 1):
 '''
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 10
-Train loss: 5.007e-01
-Validation loss: 6.234e-01
+Train loss: 6.766e-01
+Validation loss: 8.375e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 20
-Train loss: 4.962e-01
-Validation loss: 5.964e-01
+Train loss: 6.051e-01
+Validation loss: 7.695e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 30
-Train loss: 4.970e-01
-Validation loss: 6.004e-01
+Train loss: 5.729e-01
+Validation loss: 7.738e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 40
-Train loss: 4.682e-01
-Validation loss: 5.840e-01
+Train loss: 5.578e-01
+Validation loss: 6.880e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 50
-Train loss: 4.635e-01
-Validation loss: 5.732e-01
+Train loss: 5.575e-01
+Validation loss: 6.941e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 60
-Train loss: 4.671e-01
-Validation loss: 5.708e-01
+Train loss: 5.323e-01
+Validation loss: 6.737e-01
 ++++++++++++++++++++++++++++++++++++++++++++++++++
-Epoch: 70
-Train loss: 4.857e-01
-Validation loss: 5.665e-01
-++++++++++++++++++++++++++++++++++++++++++++++++++
-Epoch: 80
-Train loss: 4.619e-01
-Validation loss: 5.718e-01
-++++++++++++++++++++++++++++++++++++++++++++++++++
-Epoch: 90
-Train loss: 4.886e-01
-Validation loss: 5.686e-01
+...
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 100
-Train loss: 4.749e-01
-Validation loss: 5.637e-01
+Train loss: 4.974e-01
+Validation loss: 6.332e-01
 '''
 
 #######################################
@@ -354,7 +344,7 @@ with torch.inference_mode():
 # Calculate average test loss
 avg_test_loss = test_loss / len(test_set)
 print(f"Average Test Loss: {avg_test_loss:.4f}\n")
-# Average Test Loss: 0.5664
+# Average Test Loss: 0.6391
 
 # Concatenate all batches
 test_preds_class = torch.cat(test_preds_list, dim=0).numpy()  # Predicted classes (0-6)
@@ -367,7 +357,7 @@ import numpy as np
 
 accuracy = accuracy_score(test_true, test_preds_class)
 print(f'Accuracy on test set: {accuracy:.4f}\n')
-# Accuracy on test set: 0.7563
+# Accuracy on test set: 0.7209
 
 # Confusion Matrix
 labels = [f'Class {i+1}' for i in range(7)]  # Class 1-7 for display
@@ -377,30 +367,30 @@ cm_df = pd.DataFrame(cm, index=labels, columns=labels)
 print(f'Confusion matrix:\n{cm_df}\n')
 # Confusion matrix:
 #          Class 1  Class 2  Class 3  Class 4  Class 5  Class 6  Class 7
-# Class 1    17088     2452        7        0      159       16     1479
-# Class 2     6176    18916      602        0     1726      637      165
-# Class 3        0        2     3064      126       50      355        0
-# Class 4        0        0        3      279        0        5        0
-# Class 5        0        9        5        0      887        6        0
-# Class 6        0        3      126       37        5     1601        0
-# Class 7        5        0        0        0        1        0     2110
+# Class 1    16161     2902        9        0      247       28     1926
+# Class 2     6361    18183      641        0     2195      692      257
+# Class 3        0        2     2868      148       43      468        0
+# Class 4        0        0        3      288        0        0        0
+# Class 5        0       11        4        0      932        2        1
+# Class 6        0        5      218       36       12     1454        0
+# Class 7        4        0        0        0        1        0     2000
 
 # Classification Report
 print(f'Classification report:\n{classification_report(test_true, test_preds_class, target_names=labels, digits=4)}\n')
 # Classification report:
 #               precision    recall  f1-score   support
 
-#      Class 1     0.7344    0.8060    0.7685     21201
-#      Class 2     0.8847    0.6703    0.7627     28222
-#      Class 3     0.8048    0.8518    0.8277      3597
-#      Class 4     0.6312    0.9721    0.7654       287
-#      Class 5     0.3136    0.9779    0.4750       907
-#      Class 6     0.6111    0.9035    0.7291      1772
-#      Class 7     0.5621    0.9972    0.7189      2116
+#      Class 1     0.7174    0.7597    0.7380     21273
+#      Class 2     0.8616    0.6419    0.7357     28329
+#      Class 3     0.7662    0.8127    0.7888      3529
+#      Class 4     0.6102    0.9897    0.7549       291
+#      Class 5     0.2717    0.9811    0.4256       950
+#      Class 6     0.5499    0.8429    0.6656      1725
+#      Class 7     0.4780    0.9975    0.6463      2005
 
-#     accuracy                         0.7563     58102
-#    macro avg     0.6488    0.8827    0.7210     58102
-# weighted avg     0.7946    0.7563    0.7617     58102
+#     accuracy                         0.7209     58102
+#    macro avg     0.6079    0.8608    0.6793     58102
+# weighted avg     0.7696    0.7209    0.7296     58102
 
 # Per-class accuracy (useful for imbalanced datasets)
 print("Per-class accuracy:")
@@ -434,8 +424,8 @@ for i in [3, 4]:  # Class 4 and 5 (indices 3 and 4)
             precision = 0
         print(f"  Class {i+1}: Recall={recall:.4f}, Precision={precision:.4f}")
 # ⚠️ Minority class performance:
-#   Class 4: Recall=0.9721, Precision=0.6312
-#   Class 5: Recall=0.9779, Precision=0.3136
+#   Class 4: Recall=0.9897, Precision=0.6102
+#   Class 5: Recall=0.9811, Precision=0.2717
 
 ############
 ## Saving ##

@@ -97,6 +97,8 @@ print(y_scaled.shape)
 ## Dataset splitting ##
 #######################
 
+BATCH_SIZE = 2*11
+
 train_len = int(0.8 * len(X_scaled)) # MUST be INTEGER
 val_len = int(0.1 * len(X_scaled))
 test_len = len(X_scaled) - (train_len + val_len)
@@ -106,9 +108,9 @@ from torch.utils.data import DataLoader, TensorDataset, random_split
 full_dataset = TensorDataset(X_scaled, y_scaled)
 train_split, val_split, test_split = random_split(dataset=full_dataset, lengths=[train_len, val_len, test_len])
 
-train_set = DataLoader(train_split, batch_size=2**11, shuffle=True)
-val_set = DataLoader(val_split, batch_size=2**11, shuffle=False)
-test_set = DataLoader(test_split, batch_size=2**11, shuffle=False)
+train_set = DataLoader(train_split, batch_size=BATCH_SIZE, shuffle=True)
+val_set = DataLoader(val_split, batch_size=BATCH_SIZE, shuffle=False)
+test_set = DataLoader(test_split, batch_size=BATCH_SIZE, shuffle=False)
 
 ####################
 ## Model building ##

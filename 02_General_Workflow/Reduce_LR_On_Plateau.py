@@ -21,4 +21,11 @@ for epoch in epoch:
     #...validating...
     
     scheduler.step(metrics) # Metrics could be avg_val_loss (MUST HAVE METRICS FOR ReduceLROnPlateau)
+    
+    current_lr = optimizer.param_groups[0]['lr']
+    print(f"Current lr: {current_lr}")
+    
+##################
+
+
 '''

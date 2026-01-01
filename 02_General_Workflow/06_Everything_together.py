@@ -52,6 +52,8 @@ y += torch.normal(mean=10, std=1, size=(200,), device=device) # Add variation
 ## 1. Dataset splitting ##
 ##########################
 
+BATCH_SIZE = 16
+
 train_len = int(0.7 * len(X)) # MUST be INTEGER
 val_len = int(0.15 * len(X))
 test_len = len(X) - (train_len + val_len)
@@ -61,9 +63,9 @@ from torch.utils.data import DataLoader, TensorDataset, random_split
 full_dataset = TensorDataset(X, y)
 train_split, val_split, test_split = random_split(dataset=full_dataset, lengths=[train_len, val_len, test_len])
 
-train_set = DataLoader(train_split, batch_size=16, shuffle=True)
-val_set = DataLoader(val_split, batch_size=16, shuffle=False)
-test_set = DataLoader(test_split, batch_size=16, shuffle=False)
+train_set = DataLoader(train_split, batch_size=BATCH_SIZE, shuffle=True)
+val_set = DataLoader(val_split, batch_size=BATCH_SIZE, shuffle=False)
+test_set = DataLoader(test_split, batch_size=BATCH_SIZE, shuffle=False)
 
 #######################
 ## 2. Model building ##
