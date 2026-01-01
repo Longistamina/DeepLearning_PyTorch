@@ -121,7 +121,7 @@ class ANNbinary(nn.Module):
     def __init__(self, dropout_rate=0.3):
         super().__init__()
         
-        self.main = nn.Sequential(
+        self.mlp = nn.Sequential(
             # Layer 1: 100 inputs -> 128 neurons
             nn.Linear(in_features=100, out_features=128),
             nn.BatchNorm1d(128),
@@ -146,7 +146,7 @@ class ANNbinary(nn.Module):
         )
     
     def forward(self, X):
-        return self.main(X)
+        return self.mlp(X)
     
 '''Call out a model as an instance of a class'''
 torch.manual_seed(42)

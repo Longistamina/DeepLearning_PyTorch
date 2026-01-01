@@ -123,7 +123,7 @@ class ANNregressor(nn.Module):
         super().__init__()
         
         '''Use nn.Sequential() to put our layers together'''
-        self.main = nn.Sequential(
+        self.mlp = nn.Sequential( # MLP = multilayer perceptron
             
             # Layer 1: 12 inputs -> 64 neurons (upscale from 12 features to 64 features)
             # use nn.ReLU() as activation since median_house_value is non-negative
@@ -141,7 +141,7 @@ class ANNregressor(nn.Module):
         )
     
     def forward(self, X):
-        return self.main(X)
+        return self.mlp(X)
     
 '''Call out a model as an instance of a class'''
 torch.manual_seed(42)

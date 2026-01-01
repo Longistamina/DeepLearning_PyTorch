@@ -99,43 +99,36 @@ train_set = DataLoader(train_split, batch_size=BATCH_SIZE, shuffle=True)
 val_set = DataLoader(val_split, batch_size=BATCH_SIZE, shuffle=False)
 test_set = DataLoader(test_split, batch_size=BATCH_SIZE, shuffle=False)
 
-################################
-## ADASYN to handle imbalance ##
-################################
+###################
+## Class weights ##
+###################
 
-from imblearn.over_sampling import ADASYN
+from collections import Counter
 
-X_train = X_scaled[train_split.indices].cpu().numpy()  # ✅ Already scaled!
-y_train = y_scaled[train_split.indices].cpu().numpy()
+# Extract labels from training split only
+train_labels = [y_scaled[idx].item() for idx in train_split.indices]
+class_counts = Counter(train_labels)
 
-adasyn = ADASYN(sampling_strategy='not majority', random_state=42)
-X_train_resampled, y_train_resampled = adasyn.fit_resample(X_train, y_train)
+# Calculate class weights (inverse frequency)
+class_count_tensor = torch.tensor([class_counts[i] for i in range(7)], dtype=torch.float32)
+class_weights = 1.0 / class_count_tensor
+class_weights = class_weights / class_weights.sum() * 7  # Normalize to sum = 7
 
-print(np.unique_counts(y_train_resampled))
-# UniqueCountsResult(values=array([0, 1, 2, 3, 4, 5, 6]), counts=array([227344, 226703, 228866, 226797, 225687, 225748, 226998]))
+print("\nClass distribution in training set:")
+for i in range(7):
+    orig_class = i + 1  # Show original class labels (1-7)
+    print(f"  Class {orig_class}: {class_counts[i]:>6} samples, weight: {class_weights[i]:.4f}")
+# Class distribution in training set:
+#   Class 1: 169117 samples, weight: 0.0541
+#   Class 2: 226849 samples, weight: 0.0403
+#   Class 3:  28730 samples, weight: 0.3185
+#   Class 4:   2195 samples, weight: 4.1691
+#   Class 5:   7614 samples, weight: 1.2019
+#   Class 6:  13915 samples, weight: 0.6576
+#   Class 7:  16389 samples, weight: 0.5584
 
-##################################
-## Recreate Training DataLoader ##
-##################################
-
-# Convert resampled data to PyTorch tensors
-X_train_tensor = torch.tensor(X_train_resampled, dtype=torch.float32, device=device)
-y_train_tensor = torch.tensor(y_train_resampled, dtype=torch.long, device=device)
-
-# Create new TensorDataset
-train_set_resampled = TensorDataset(X_train_tensor, y_train_tensor)
-
-# Create new DataLoader with batches
-train_set = DataLoader(train_set_resampled, batch_size=BATCH_SIZE, shuffle=True)
-
-print(f"✅ New training set created!")
-print(f"   Total samples: {len(X_train_resampled):,}")
-print(f"   Batch size: {BATCH_SIZE}")
-print(f"   Number of batches: {len(train_set)}")
-# ✅ New training set created!
-#    Total samples: 1,588,541
-#    Batch size: 131072
-#    Number of batches: 13
+# Move weights to device
+class_weights = class_weights.to(device)
 
 ######################
 ## Model Definition ##
@@ -146,7 +139,7 @@ class ANNmultinomial(nn.Module):
     def __init__(self, input_features=54, num_classes=7, dropout_rate=0.3):
         super().__init__()
         
-        self.mlp = nn.Sequential(
+        self.netowrk = nn.Sequential(
             # Layer 1: 54 inputs -> 128 neurons
             nn.Linear(in_features=input_features, out_features=128),
             nn.BatchNorm1d(128),
@@ -171,7 +164,7 @@ class ANNmultinomial(nn.Module):
         )
     
     def forward(self, X):
-        return self.mlp(X)
+        return self.netowrk(X)
 
 # Initialize model
 torch.manual_seed(42)
@@ -181,13 +174,39 @@ model.to(device)
 print(f"Total parameters: {sum(p.numel() for p in model.parameters()):,}")
 # Total parameters: 18,055
 
-###############################
-## Loss Function & Optimizer ##
-###############################
+################
+## Focal Loss ##
+################
 
-loss_fn = nn.CrossEntropyLoss()
-# Note: We'll need to apply log to model output in training loop
-# OR better: use CrossEntropyLoss without Softmax in model
+from torch import nn
+
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=None, gamma=2, reduction='mean'):
+        super().__init__()
+        self.alpha = alpha  # Class weights tensor
+        self.gamma = gamma  # Focusing parameter
+        self.reduction = reduction
+        
+    def forward(self, inputs, targets):
+        # inputs: (batch_size, num_classes) - raw logits
+        # targets: (batch_size,) - class indices
+        ce_loss = nn.CrossEntropyLoss(weight=self.alpha, reduction='none')(inputs, targets)
+        pt = torch.exp(-ce_loss)  # Probability of correct class
+        focal_loss = ((1 - pt) ** self.gamma) * ce_loss
+        
+        if self.reduction == 'mean':
+            return focal_loss.mean()
+        elif self.reduction == 'sum':
+            return focal_loss.sum()
+        else:
+            return focal_loss
+
+# Initialize criterion
+loss_fn = FocalLoss(alpha=class_weights, gamma=2)
+
+#############################
+## Optimizer and Scheduler ##
+#############################
 
 optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
 
@@ -234,37 +253,48 @@ for epoch in range(1, epochs+1, 1):
         print(f"Epoch: {epoch}")
         print(f"Train loss: {loss:.3e}")
         print(f"Validation loss: {avg_val_loss:.3e}")
+        
 '''
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 10
-Train loss: 6.766e-01
-Validation loss: 8.375e-01
+Train loss: 1.993e-02
+Validation loss: 1.437e-02
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 20
-Train loss: 6.051e-01
-Validation loss: 7.695e-01
+Train loss: 1.496e-02
+Validation loss: 1.084e-02
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 30
-Train loss: 5.729e-01
-Validation loss: 7.738e-01
+Train loss: 1.217e-02
+Validation loss: 9.233e-03
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 40
-Train loss: 5.578e-01
-Validation loss: 6.880e-01
+Train loss: 1.120e-02
+Validation loss: 8.230e-03
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 50
-Train loss: 5.575e-01
-Validation loss: 6.941e-01
+Train loss: 9.981e-03
+Validation loss: 7.704e-03
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 60
-Train loss: 5.323e-01
-Validation loss: 6.737e-01
+Train loss: 9.152e-03
+Validation loss: 6.860e-03
 ++++++++++++++++++++++++++++++++++++++++++++++++++
-...
+Epoch: 70
+Train loss: 9.378e-03
+Validation loss: 6.796e-03
+++++++++++++++++++++++++++++++++++++++++++++++++++
+Epoch: 80
+Train loss: 8.702e-03
+Validation loss: 6.543e-03
+++++++++++++++++++++++++++++++++++++++++++++++++++
+Epoch: 90
+Train loss: 9.313e-03
+Validation loss: 6.357e-03
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 100
-Train loss: 4.974e-01
-Validation loss: 6.332e-01
+Train loss: 7.877e-03
+Validation loss: 6.170e-03
 '''
 
 #######################################
@@ -344,7 +374,7 @@ with torch.inference_mode():
 # Calculate average test loss
 avg_test_loss = test_loss / len(test_set)
 print(f"Average Test Loss: {avg_test_loss:.4f}\n")
-# Average Test Loss: 0.6391
+# Average Test Loss: 0.0065
 
 # Concatenate all batches
 test_preds_class = torch.cat(test_preds_list, dim=0).numpy()  # Predicted classes (0-6)
@@ -357,7 +387,7 @@ import numpy as np
 
 accuracy = accuracy_score(test_true, test_preds_class)
 print(f'Accuracy on test set: {accuracy:.4f}\n')
-# Accuracy on test set: 0.7209
+# Accuracy on test set: 0.1430
 
 # Confusion Matrix
 labels = [f'Class {i+1}' for i in range(7)]  # Class 1-7 for display
@@ -367,30 +397,30 @@ cm_df = pd.DataFrame(cm, index=labels, columns=labels)
 print(f'Confusion matrix:\n{cm_df}\n')
 # Confusion matrix:
 #          Class 1  Class 2  Class 3  Class 4  Class 5  Class 6  Class 7
-# Class 1    16161     2902        9        0      247       28     1926
-# Class 2     6361    18183      641        0     2195      692      257
-# Class 3        0        2     2868      148       43      468        0
-# Class 4        0        0        3      288        0        0        0
-# Class 5        0       11        4        0      932        2        1
-# Class 6        0        5      218       36       12     1454        0
-# Class 7        4        0        0        0        1        0     2000
+# Class 1     1753      194        3        0     3741      133    15312
+# Class 2     3364     1012      260       14    15291     1634     6848
+# Class 3        0        0      691      425      162     2302        0
+# Class 4        0        0        0      276        0        4        0
+# Class 5        0        0        0        0      926        4        0
+# Class 6        0        0        7       79       15     1647        0
+# Class 7        0        0        0        0        1        0     2004
 
 # Classification Report
 print(f'Classification report:\n{classification_report(test_true, test_preds_class, target_names=labels, digits=4)}\n')
 # Classification report:
 #               precision    recall  f1-score   support
 
-#      Class 1     0.7174    0.7597    0.7380     21273
-#      Class 2     0.8616    0.6419    0.7357     28329
-#      Class 3     0.7662    0.8127    0.7888      3529
-#      Class 4     0.6102    0.9897    0.7549       291
-#      Class 5     0.2717    0.9811    0.4256       950
-#      Class 6     0.5499    0.8429    0.6656      1725
-#      Class 7     0.4780    0.9975    0.6463      2005
+#      Class 1     0.3426    0.0829    0.1335     21136
+#      Class 2     0.8391    0.0356    0.0683     28423
+#      Class 3     0.7190    0.1930    0.3043      3580
+#      Class 4     0.3476    0.9857    0.5140       280
+#      Class 5     0.0460    0.9957    0.0879       930
+#      Class 6     0.2877    0.9422    0.4408      1748
+#      Class 7     0.0829    0.9995    0.1532      2005
 
-#     accuracy                         0.7209     58102
-#    macro avg     0.6079    0.8608    0.6793     58102
-# weighted avg     0.7696    0.7209    0.7296     58102
+#     accuracy                         0.1430     58102
+#    macro avg     0.3807    0.6050    0.2432     58102
+# weighted avg     0.5934    0.1430    0.1232     58102
 
 # Per-class accuracy (useful for imbalanced datasets)
 print("Per-class accuracy:")
@@ -402,13 +432,13 @@ for i in range(7):
     else:
         print(f"  Class {i+1}: No samples in test set")
 # Per-class accuracy:
-#   Class 1: 0.8060 (21201 samples)
-#   Class 2: 0.6703 (28222 samples)
-#   Class 3: 0.8518 (3597 samples)
-#   Class 4: 0.9721 (287 samples)
-#   Class 5: 0.9779 (907 samples)
-#   Class 6: 0.9035 (1772 samples)
-#   Class 7: 0.9972 (2116 samples)
+#   Class 1: 0.0829 (21136 samples)
+#   Class 2: 0.0356 (28423 samples)
+#   Class 3: 0.1930 (3580 samples)
+#   Class 4: 0.9857 (280 samples)
+#   Class 5: 0.9957 (930 samples)
+#   Class 6: 0.9422 (1748 samples)
+#   Class 7: 0.9995 (2005 samples)
 
 
 # Check minority class performance (Class 4 and 5)
@@ -424,8 +454,8 @@ for i in [3, 4]:  # Class 4 and 5 (indices 3 and 4)
             precision = 0
         print(f"  Class {i+1}: Recall={recall:.4f}, Precision={precision:.4f}")
 # ⚠️ Minority class performance:
-#   Class 4: Recall=0.9897, Precision=0.6102
-#   Class 5: Recall=0.9811, Precision=0.2717
+#   Class 4: Recall=0.9857, Precision=0.3476
+#   Class 5: Recall=0.9957, Precision=0.0460
 
 ############
 ## Saving ##
@@ -437,7 +467,7 @@ MODEL_PATH = Path("03_ArtificialNeuralNetwork_ANN").joinpath("save")
 MODEL_PATH.mkdir(parents=True, exist_ok=True)
 
 # PyTorch model can be saved in .pth or .pt format
-PARAMS_NAME = "ANN_classifier_multinomial_ADASYN.pth"
+PARAMS_NAME = "ANN_classifier_multinomial_FocalLoss.pth"
 
 # Save the model (use model.state_dict() to save only the parameters)
 torch.save(obj=model.state_dict(), f=MODEL_PATH.joinpath(PARAMS_NAME))
