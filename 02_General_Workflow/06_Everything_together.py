@@ -88,7 +88,6 @@ class LinearRegressionModel(nn.Module):
         use nn.ReLU() as activation function to capture non-linear patterns
         '''
         
-        
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         y1 = self.activate(self.layer_1(X))
         y2 = self.activate(self.layer_2(y1))
