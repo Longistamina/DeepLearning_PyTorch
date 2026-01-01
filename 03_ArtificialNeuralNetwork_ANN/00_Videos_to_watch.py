@@ -12,4 +12,13 @@ https://www.youtube.com/watch?v=sDv4f4s2SB8&list=PLblh5JKOoLUIxGDQs4LFFD--41Vzf-
 
 4. Stochastic Gradient Descent:
 https://www.youtube.com/watch?v=vMh0zPT0tLI
+
+5. Backpropagation (general idea, optimize a single parameter):
+https://www.youtube.com/watch?v=IN2XmBhILt4&list=PLblh5JKOoLUIxGDQs4LFFD--41Vzf-ME1&index=5
+
+6. Backpropagation (optimize MANY parameters of a neural network simultaneously):
+https://www.youtube.com/watch?v=iyn2zdALii8&list=PLblh5JKOoLUIxGDQs4LFFD--41Vzf-ME1&index=6
+
+7. Backpropagation (optimize ALL parameters of a neural network simultaneously):
+https://www.youtube.com/watch?v=GKZoOHXGcLo&list=PLblh5JKOoLUIxGDQs4LFFD--41Vzf-ME1&index=7
 '''
