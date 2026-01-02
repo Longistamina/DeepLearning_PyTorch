@@ -146,10 +146,6 @@ scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=2, factor=0.2)
 ## 5. Training - Validating loop ##
 ###################################
 
-###################################
-## 5. Training - Validating loop ##
-###################################
-
 epochs = 100
 
 train_loss_list, val_loss_list = [], []
@@ -288,20 +284,79 @@ def plot_train_val_loss_curves(epochs, train_loss_list, val_loss_list):
     
 plot_train_val_loss_curves(epochs, train_loss_list, val_loss_list)
 
+
 ################
 ## 7. Testing ##
 ################
 
-_ = model.eval()
+import torch
+import numpy as np
 
 test_loss = 0
-with torch.inference_mode():
-    for X_test, y_test in test_set: # Use the test_set loader
-        test_preds = model(X_test)
-        test_loss += loss_fn(test_preds, y_test.unsqueeze(1)).item()
+y_test_preds = []
+y_test_true = []
 
-print(f"Final Test Loss: {test_loss / len(test_set):.4f}")
+_ = model.eval()
+with torch.inference_mode():
+    for X_test, y_test in test_set:
+        # Keep the exact prediction line
+        test_preds = model(X_test)
+        
+        # Keep the loss calculation
+        test_loss += loss_fn(test_preds, y_test.unsqueeze(1)).item()
+        
+        # Collect predictions and true values for plotting
+        # Move to CPU and flatten to handle batching
+        y_test_preds.append(test_preds.cpu().numpy().flatten())
+        y_test_true.append(y_test.cpu().numpy().flatten())
+
+# Average the loss
+avg_test_loss = test_loss / len(test_set)
+print(f"Final Test Loss: {avg_test_loss:.4f}")
 # Final Test Loss: 25.6673
+
+# Flatten lists into single numpy arrays
+y_test_preds = np.concatenate(y_test_preds)
+y_test_true = np.concatenate(y_test_true)
+
+############ (OPTIONAL) Visualize y_true=y_test ############
+
+import plotly.graph_objects as go
+
+# Determine the bounds for the y=x reference line
+min_val = min(y_test_true.min(), y_test_preds.min())
+max_val = max(y_test_true.max(), y_test_preds.max())
+
+fig = go.Figure()
+
+# Add the scatter points
+fig.add_trace(go.Scatter(
+    x=y_test_true, 
+    y=y_test_preds,
+    mode='markers',
+    name='Predictions',
+    marker=dict(color='yellow', opacity=0.5, size=7)
+))
+
+# Add the y=x reference line
+fig.add_trace(go.Scatter(
+    x=[min_val, max_val], 
+    y=[min_val, max_val],
+    mode='lines',
+    name='Perfect Prediction (y=x)',
+    line=dict(color='red', dash='dash', width=2)
+))
+
+# Update appearance
+fig.update_layout(
+    title='Actual vs. Predicted Values',
+    xaxis_title='True Values (y_test_true)',
+    yaxis_title='Predicted Values (y_test_preds)',
+    template='plotly_dark',
+    showlegend=True
+)
+
+fig.show()
 
 ###############
 ## 8. Saving ##
