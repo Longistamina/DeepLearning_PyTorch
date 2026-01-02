@@ -8,3 +8,5 @@ DDPM: https://github.com/dome272/Diffusion-Models-pytorch/tree/main?tab=readme-o
 
 DDPM for 2D point cloud
 https://liorsinai.github.io/machine-learning/2022/12/03/denoising-diffusion-1-spiral.html
+
+CoverType -> train conditional VAEs to balance the data
