@@ -42,6 +42,10 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 # cuda
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
+# device(type='cuda')
+
 
 #-----------------------------------------------------------------------------------------------------------#
 #------------------------------------------ 2. Device Properties -------------------------------------------#
