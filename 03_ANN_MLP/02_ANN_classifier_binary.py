@@ -8,7 +8,7 @@ import torch
 print(torch.__version__)
 # 2.11.0.dev20251216+cu130
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 # cuda
 
