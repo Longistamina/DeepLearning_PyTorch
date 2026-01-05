@@ -72,7 +72,7 @@ print(val_set)
 train_set[0]['image']
 
 print(train_set[0]['image'])
-# <PIL.PngImagePlugin.PngImageFile image mode=L size=28x28>
+# <PIL.PngImagePlugin.PngImageFile image mode=L size=28x28 at 0x6FFF3C175B80>
 
 #########################
 ## Image preprocessing ##
@@ -142,8 +142,8 @@ we concatenate 512 images of size (1x32x32) (Channel*Height*Width) along the Hei
 mean_all = torch.mean(tensor_placeholder, dim=(1, 2))
 std_all = torch.std(tensor_placeholder, dim=(1, 2))
 
-print(mean_all)  # tensor([0.1307]) - typical for MNIST
-print(std_all)   # tensor([0.3081]) - typical for MNIST
+print(mean_all)  # tensor([0.1317])
+print(std_all)   # tensor([0.2902])
 
 #### RE-NORMALIZE ###
 
@@ -354,13 +354,45 @@ for epoch in tqdm(iterable=range(1, epochs+1), desc="Training"):
     
     scheduler.step(avg_val_loss)
     
-    if epoch % 5 == 0:
+    if (epoch % 5 == 0) or (epoch == 1):
         print("+"*50)
         print(f"Epoch: {epoch}")
         print(f"Train loss: {loss:.4f}")
         print(f"Validation loss: {avg_val_loss:.4f}")
         print(f"Validation accuracy: {avg_val_acc:.2f}%")
         print(f"Current LR: {current_lr}")
+'''
+++++++++++++++++++++++++++++++++++++++++++++++++++
+Epoch: 1
+Train loss: 0.0535
+Validation loss: 0.0731
+Validation accuracy: 97.79%
+Current LR: 0.001
+++++++++++++++++++++++++++++++++++++++++++++++++++
+Epoch: 5
+Train loss: 0.1509
+Validation loss: 0.0328
+Validation accuracy: 98.89%
+Current LR: 0.001
+++++++++++++++++++++++++++++++++++++++++++++++++++
+Epoch: 10
+Train loss: 0.0018
+Validation loss: 0.0296
+Validation accuracy: 99.13%
+Current LR: 0.001
+++++++++++++++++++++++++++++++++++++++++++++++++++
+Epoch: 15
+Train loss: 0.0043
+Validation loss: 0.0446
+Validation accuracy: 98.86%
+Current LR: 0.001
+++++++++++++++++++++++++++++++++++++++++++++++++++
+Epoch: 20
+Train loss: 0.0001
+Validation loss: 0.0386
+Validation accuracy: 99.25%
+Current LR: 0.0005
+'''
 
 #######################################
 ## Drawing Train and Val loss curves ##
@@ -432,6 +464,23 @@ cm = confusion_matrix(all_labels, all_preds)
 
 # Print classification report
 print('Classification report\n', classification_report(all_labels, all_preds))
+# Classification report
+#                precision    recall  f1-score   support
+
+#            0       1.00      1.00      1.00       980
+#            1       1.00      1.00      1.00      1135
+#            2       0.99      1.00      0.99      1032
+#            3       0.99      1.00      0.99      1010
+#            4       0.99      1.00      0.99       982
+#            5       0.99      0.99      0.99       892
+#            6       1.00      0.99      1.00       958
+#            7       0.99      0.99      0.99      1028
+#            8       1.00      0.99      0.99       974
+#            9       0.99      0.99      0.99      1009
+
+#     accuracy                           0.99     10000
+#    macro avg       0.99      0.99      0.99     10000
+# weighted avg       0.99      0.99      0.99     10000
 
 import plotly.express as px
 
@@ -496,9 +545,31 @@ print(inference_inputs.shape)
 
 inference_outputs = model_loaded(inference_inputs)
 print(inference_outputs)
+# tensor([[-2.3858e+01, -5.1395e+00, -1.0026e+01, -7.1979e+00, -3.9770e+00,
+#          -1.9150e+01, -3.8184e+01,  2.4786e+01, -8.6416e+00, -3.5825e+00],
+#         [-6.5254e+00, -2.8773e+00,  2.9795e+01, -1.2022e+01, -8.6533e+00,
+#          -2.3611e+01, -4.6467e+00, -1.3890e+01, -1.1569e+01, -2.8425e+01],
+#         [-1.3018e+01,  1.4856e+01, -1.1752e+01, -2.0149e+01, -1.6110e+00,
+#          -7.2483e+00, -7.7743e+00, -6.0461e-01, -2.9084e+00, -1.3665e+01],
+#         [ 1.9816e+01, -2.0723e+01, -9.6254e+00, -1.5709e+01, -1.0649e+01,
+#          -1.0625e+01, -1.1768e+00, -1.8065e+01, -1.2069e+01, -2.9945e+00],
+#         [-1.6542e+01, -8.6741e+00, -1.1720e+01, -2.4561e+01,  2.3231e+01,
+#          -1.5178e+01, -1.1694e+01, -8.4690e+00, -1.3377e+01,  4.5189e+00],
+#         [-1.4530e+01,  1.7627e+01, -1.3264e+01, -2.2885e+01, -3.5202e+00,
+#          -9.4974e+00, -1.1358e+01,  3.2740e-01, -2.0507e+00, -1.6039e+01],
+#         [-2.6542e+01, -5.7028e+00, -8.5020e+00, -2.1896e+01,  1.5752e+01,
+#          -1.3248e+01, -1.4856e+01, -7.7289e+00, -2.2026e+00,  1.7383e-01],
+#         [-1.7427e+01, -1.6647e+01, -3.4704e+00, -2.7922e+00, -2.7330e+00,
+#          -1.8873e+01, -3.6574e+01, -1.7888e+01, -4.1861e+00,  2.0485e+01],
+#         [-1.3796e+01, -9.3176e+00, -2.2982e+01, -1.4894e+01, -9.3404e+00,
+#           1.6623e+01,  3.1275e+00, -1.7701e+01, -3.7895e+00,  3.4103e-02],
+#         [-2.5642e+01, -1.2811e+01, -2.0516e+01, -9.4124e+00,  3.1344e+00,
+#          -1.8876e+01, -4.3080e+01, -1.1528e+00, -5.4452e+00,  2.3623e+01]],
+#        device='cuda:0', grad_fn=<AddmmBackward0>)
 
 predicted = torch.argmax(inference_outputs, dim=1)
 print(predicted)
+# tensor([7, 2, 1, 0, 4, 1, 4, 9, 5, 9], device='cuda:0')
 
 #----------
 ## Visualize predicted and image
@@ -508,7 +579,6 @@ import matplotlib.pyplot as plt
 
 for i, image in enumerate(val_set['image'][:10]):
     print("="*50)
-    print(f"Predicted digit: {predicted[i].item()}")
     plt.imshow(image, cmap='gray')
     plt.title(f"Predicted: {predicted[i].item()}")
     plt.axis('off')

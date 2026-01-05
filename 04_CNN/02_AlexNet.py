@@ -303,7 +303,7 @@ Final shape: (batch, 1024) → ready for nn.Linear(1024, 512)
 #################
 
 Formula for Conv2d output size:
-    output_size = (input_size + 2xpadding - kernel_size) / stride + 1
+    output_size = (input_size - kernel_size + 2*padding) / stride + 1
 '''
 
 ##########################
@@ -388,7 +388,7 @@ for epoch in tqdm(iterable=range(1, epochs+1), desc="Training"):
     
     scheduler.step(avg_val_loss)
     
-    if epoch % 10 == 0:
+    if (epoch % 10 == 0) or (epoch == 1):
         print("+"*50)
         print(f"Epoch: {epoch}")
         print(f"Train loss: {loss:.4f}")
@@ -397,54 +397,70 @@ for epoch in tqdm(iterable=range(1, epochs+1), desc="Training"):
         print(f"Current LR: {current_lr}")
 '''
 ++++++++++++++++++++++++++++++++++++++++++++++++++
+Epoch: 1
+Train loss: 1.6427
+Validation loss: 1.5276
+Validation accuracy: 41.09%
+Current LR: 0.0001
+++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 10
-Train loss: 0.1208
-Validation loss: 0.6865
-Validation accuracy: 77.58%
+Train loss: 0.0989
+Validation loss: 0.7442
+Validation accuracy: 76.26%
 Current LR: 0.0001
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 20
-Train loss: 0.0749
-Validation loss: 1.0052
-Validation accuracy: 78.34%
+Train loss: 0.1018
+Validation loss: 0.8777
+Validation accuracy: 79.50%
 Current LR: 0.0001
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 30
-Train loss: 0.0125
-Validation loss: 1.3402
-Validation accuracy: 80.85%
+Train loss: 0.0003
+Validation loss: 1.3520
+Validation accuracy: 80.24%
 Current LR: 5e-05
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 40
-Train loss: 0.0004
-Validation loss: 1.6344
-Validation accuracy: 80.31%
+Train loss: 0.0045
+Validation loss: 1.5479
+Validation accuracy: 80.41%
 Current LR: 2.5e-05
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 50
 Train loss: 0.0000
-Validation loss: 1.7851
-Validation accuracy: 81.52%
+Validation loss: 1.7513
+Validation accuracy: 80.84%
 Current LR: 1.25e-05
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 60
 Train loss: 0.0000
-Validation loss: 1.9175
-Validation accuracy: 81.39%
+Validation loss: 1.9143
+Validation accuracy: 81.06%
 Current LR: 6.25e-06
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 70
 Train loss: 0.0000
-Validation loss: 1.9965
-Validation accuracy: 81.70%
+Validation loss: 1.9788
+Validation accuracy: 81.18%
 Current LR: 3.125e-06
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 Epoch: 80
 Train loss: 0.0000
-...
+Validation loss: 2.1361
+Validation accuracy: 81.04%
+Current LR: 1.5625e-06
+++++++++++++++++++++++++++++++++++++++++++++++++++
+Epoch: 90
 Train loss: 0.0000
-Validation loss: 2.2699
-Validation accuracy: 81.77%
+Validation loss: 2.1796
+Validation accuracy: 81.26%
+Current LR: 7.8125e-07
+++++++++++++++++++++++++++++++++++++++++++++++++++
+Epoch: 100
+Train loss: 0.0000
+Validation loss: 2.2243
+Validation accuracy: 81.45%
 Current LR: 3.90625e-07
 '''
 
@@ -524,20 +540,20 @@ print('Classification report\n', classification_report(all_labels, all_preds))
 # Classification report
 #                precision    recall  f1-score   support
 
-#            0       0.81      0.84      0.83      1000
-#            1       0.89      0.91      0.90      1000
-#            2       0.80      0.73      0.76      1000
-#            3       0.66      0.68      0.67      1000
-#            4       0.78      0.81      0.79      1000
-#            5       0.74      0.73      0.73      1000
-#            6       0.87      0.87      0.87      1000
-#            7       0.87      0.86      0.86      1000
+#            0       0.83      0.85      0.84      1000
+#            1       0.90      0.89      0.89      1000
+#            2       0.77      0.74      0.76      1000
+#            3       0.68      0.67      0.67      1000
+#            4       0.78      0.80      0.79      1000
+#            5       0.75      0.73      0.74      1000
+#            6       0.85      0.87      0.86      1000
+#            7       0.84      0.85      0.84      1000
 #            8       0.89      0.88      0.89      1000
-#            9       0.88      0.87      0.87      1000
+#            9       0.85      0.87      0.86      1000
 
-#     accuracy                           0.82     10000
-#    macro avg       0.82      0.82      0.82     10000
-# weighted avg       0.82      0.82      0.82     10000
+#     accuracy                           0.81     10000
+#    macro avg       0.81      0.81      0.81     10000
+# weighted avg       0.81      0.81      0.81     10000
         
 import plotly.express as px
 
@@ -593,7 +609,7 @@ _ = model_loaded.eval().to(device)
 
 inference_inputs = []
 for image in val_set['img'][:10]: # Use 10 images only for inference demonstration
-    tensor = preprocess(image)
+    tensor = preprocess_full(image)
     inference_inputs.append(tensor.to(device))
 
 print(inference_inputs[0].shape)
@@ -645,6 +661,7 @@ import matplotlib.pyplot as plt
 
 for i, image in enumerate(val_set['img'][:10]):
     print("="*50)
-    print(val_set.features['label'].names[predicted[i]])
+    predict_class = val_set.features['label'].names[predicted[i]]
+    plt.title(f"Predicted: {predict_class}")
     plt.imshow(image)
     plt.show()
