@@ -12,4 +12,7 @@ https://www.youtube.com/watch?v=HPXnJmO8yQ4
 
 3. James Briggs: CNN explain and pytorch code (AlexNet)
 https://www.youtube.com/watch?v=ZBfpkepdZlw&t=63s
+
+4. VGGNet:
+https://www.youtube.com/watch?v=rhCiuu4AW_w
 '''
