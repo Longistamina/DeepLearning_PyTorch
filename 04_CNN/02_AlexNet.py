@@ -259,7 +259,8 @@ class AlexNet(nn.Module):
                         
             # Block 6: drop_out -> fc_linear -> relu
             nn.Dropout(p=0.5),
-            nn.LazyLinear(512), # Automatically figures out input size
+            nn.LazyLinear(512), # Automatically figures out input size (1024 -> 512)
+            # nn.Linear(1024, 512)
             nn.ReLU(),
             
             # Block 7: drop_out -> fc_linear -> relu
@@ -275,6 +276,35 @@ class AlexNet(nn.Module):
     def forward(self, X):
         out = self.cnn(X)
         return out
+'''
+Block 1:
+# Conv2d (kernel=4, padding=1): 32 + 2(1) - 4 + 1 = 31 → (batch, 64, 31, 31)
+# MaxPool (kernel=3, stride=2): (31 - 3)/2 + 1 = 15 → (batch, 64, 15, 15)
+
+Block 2:
+# Conv2d (kernel=4, padding=1): 15 + 2(1) - 4 + 1 = 14 → (batch, 192, 14, 14)
+# MaxPool (kernel=3, stride=2): (14 - 3)/2 + 1 = 6 → (batch, 192, 6, 6)
+
+Block 3:
+# Conv2d (kernel=3, padding=1): 6 + 2(1) - 3 + 1 = 6 → (batch, 384, 6, 6)
+
+Block 4:
+# Conv2d (kernel=3, padding=1): 6 + 2(1) - 3 + 1 = 6 → (batch, 256, 6, 6)
+
+Block 5:
+# Conv2d (kernel=3, padding=1): 6 + 2(1) - 3 + 1 = 6 → (batch, 256, 6, 6)
+# MaxPool (kernel=3, stride=2): (6 - 3)/2 + 1 = 2 → (batch, 256, 2, 2) ✓
+
+
+After Flatten:
+256 channels x 2 height x 2 width = 1024 features
+Final shape: (batch, 1024) → ready for nn.Linear(1024, 512)
+
+#################
+
+Formula for Conv2d output size:
+    output_size = (input_size + 2xpadding - kernel_size) / stride + 1
+'''
 
 ##########################
 ## model initialization ##
