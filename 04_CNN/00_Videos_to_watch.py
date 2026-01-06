@@ -15,4 +15,11 @@ https://www.youtube.com/watch?v=ZBfpkepdZlw&t=63s
 
 4. VGGNet:
 https://www.youtube.com/watch?v=rhCiuu4AW_w
+
+5. Vanishing and Exploding Gradient:
+https://www.youtube.com/results?search_query=vanishing+gradient
+
+6. ResNet:
+- Explain: https://www.youtube.com/watch?v=w1UsKanMatM
+- Pytorch code: https://www.youtube.com/watch?v=DkNIBBBvcPs
 '''
