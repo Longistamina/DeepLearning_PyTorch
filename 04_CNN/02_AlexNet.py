@@ -531,7 +531,11 @@ print('Classification report\n', classification_report(y_true=all_labels, y_pred
 #     accuracy                           0.75      3534
 #    macro avg       0.73      0.69      0.71      3534
 # weighted avg       0.75      0.75      0.74      3534
-        
+
+#----------
+## Visualize confusion matrix
+#----------
+
 import plotly.express as px
 
 fig = px.imshow(
