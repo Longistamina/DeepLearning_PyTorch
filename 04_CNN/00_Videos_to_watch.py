@@ -22,4 +22,8 @@ https://www.youtube.com/results?search_query=vanishing+gradient
 6. ResNet:
 - Explain: https://www.youtube.com/watch?v=GWt6Fu05voI
 - Pytorch code: https://www.youtube.com/watch?v=DkNIBBBvcPs
+
+7. UNet (segmentation, diffusion, upscale low-resolution images, ...):
+- Explain: https://www.youtube.com/watch?v=NhdzGfB1q74
+- Pytorch code: https://www.youtube.com/watch?v=IHq1t7NxS8k&t=46s
 '''
