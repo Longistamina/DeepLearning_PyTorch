@@ -1,0 +1,1 @@
+# rdkit cookbook: https://www.rdkit.org/docs/Cookbook.html
