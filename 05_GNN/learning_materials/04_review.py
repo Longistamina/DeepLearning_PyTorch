@@ -3,8 +3,9 @@ Officical website: https://antoniolonga.github.io/Pytorch_geometric_tutorials/in
 
 github: https://github.com/AntonioLonga/PytorchGeometricTutorial/tree/main?tab=readme-ov-file
 
-Tutorial_03:
-https://www.youtube.com/watch?v=CwsPoa7z2c8
+Watch these videos:
++ https://www.youtube.com/watch?v=A-yKQamf2Fc&list=PLV8yxwGOxvvoNkzPfCx2i8an--Tkt7O8Z&index=6
++ https://www.youtube.com/watch?v=CwsPoa7z2c8
 
 #######################################
 
