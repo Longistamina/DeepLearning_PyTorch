@@ -1,9 +1,6 @@
-import os
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
 
 from tqdm.auto import tqdm
 from loguru import logger
@@ -46,7 +43,7 @@ class Diffusion:
     def sample_timesteps(self, n): # create the timesteps for sampling
         return torch.randint(low=1, high=self.noise_steps, size=(n,))
     
-    def sample(self, model, n):
+    def sample(self, model, n, save_interval=50):
         logger.info(f"Sampling {n} new images...")
         
         _ = model.eval()
@@ -54,7 +51,7 @@ class Diffusion:
             x = torch.randn(size=(n, 3, self.img_size, self.img_size)).to(self.device)
             
             img_list = []
-            img_list.append(x)
+            img_list.append(x.cpu()) # # Move to CPU to save GPU memory
             
             for i in tqdm(reversed(range(1, self.noise_steps)), position=0, desc="Sampling"):
                 t = (torch.ones(n) * i).long().to(self.device) # torch.ones create [1., 1., 1., ...], multiply i creates [i., i., i., ...], .long() for integer
@@ -70,7 +67,9 @@ class Diffusion:
                     
                 x = (1/torch.sqrt(alpha)) * (x - ((1 - alpha)/torch.sqrt(1 - alpha_hat))*predicted_noise) +  torch.sqrt(beta)*noise
                 
-                img_list.append(x)
+                # Only save every Nth frame
+                if (i % save_interval == 0) or (i == 1):
+                    img_list.append(x.cpu().clone()) # Move to CPU to save GPU memory
         
         _ = model.train()
         
@@ -166,7 +165,15 @@ class SelfAttention(nn.Module):
             nn.GELU(),
             nn.Linear(channels, channels),
         )
-        
+
+    def forward(self, x):
+        x = x.view(-1, self.channels, self.size * self.size).swapaxes(1, 2)
+        x_ln = self.ln(x)
+        attention_value, _ = self.mha(x_ln, x_ln, x_ln)
+        attention_value = attention_value + x
+        attention_value = self.ff_self(attention_value) + attention_value
+        return attention_value.swapaxes(2, 1).view(-1, self.channels, self.size, self.size)
+
 #######################
 ## UNet architecture ##
 #######################
@@ -241,7 +248,7 @@ class UNet(nn.Module):
         x = self.sa6(x)
         out = self.out_conv(x)
         return out
-    
+
 ###############
 ## Utilities ##
 ###############
@@ -254,7 +261,7 @@ import plotly.graph_objects as go
 import numpy as np
 
 from PIL import Image
-from matplotlib import pyplot as pyplot
+from matplotlib import pyplot as plt
 
 def plot_images(images):
     plt.figure(figsize=(32, 32))
@@ -310,47 +317,54 @@ def save_images(images, path, **kwargs):
 
 def get_data(img_size, batch_size, img_list=None, path=None):
     preprocess = transforms.Compose([
-        transforms.Resize(80),
-        transforms.RandomResizedCrop(img_size, scale=(0.8, 1.0)),
+        transforms.Resize(img_size),
+        transforms.CenterCrop(img_size),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.02),
         transforms.ToTensor(),
-        transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+        transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)
+        )
     ])
-    
-    if (img_list is None) and (path is None):
-        logger.error("No data was given")
-    
-    if path is not None:
-        dataset = torchvision.datasets.ImageFolder(path, transform=preprocess)
-    else:
-        img_transformed = torch.stack([preprocess(img) for img in img_list])
-        dataset = torch.utils.data.TensorDataset(img_transformed)
-    
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-    return dataloader
-    
+
 ####################
-## Trainning loop ##
+## pokemon images ##
 ####################
+
+import gc
+gc.collect()
+torch.cuda.empty_cache()
 
 from datasets import load_dataset
 pokemon = load_dataset(path="reach-vb/pokemon-blip-captions", split="train")
 pokemon = pokemon['image']
 
+####################
+## Trainning loop ##
+####################
+
 IMG_SIZE = 64
 
+torch.manual_seed(42)
+model = UNet().to(device=device)
+
 def train(epochs):
-    dataloader = get_data(img_size=IMG_SIZE, batch_size=32, data=pokemon)
-    model = UNet().to(device=device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
-    scheduler = torch.omptim.lr_scheduler.ReduceLROnPlateau(mode="min", patience=5, factor=0.5)
+    dataloader = get_data(img_size=IMG_SIZE, batch_size=8, img_list=pokemon)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=2e-4)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", patience=250, factor=0.8)
     loss_fn = nn.MSELoss()
     diffusion = Diffusion(img_size=IMG_SIZE, device=device)
     l = len(dataloader)
-    
+
     for epoch in tqdm(range(1, epochs+1), desc="Training"):
         
         epoch_loss = 0 # Track loss to give the scheduler a meaningful average
-        for i, (images, _) in enumerate(dataloader):
+        for i, batch in enumerate(dataloader):
+        # Handle both ImageFolder (returns tuple) and TensorDataset (returns tuple)
+            if isinstance(batch, (list, tuple)):
+                images = batch[0]
+            else:
+                images = batch
+
             images = images.to(device)
             t = diffusion.sample_timesteps(images.shape[0]).to(device)
             x_t, noise = diffusion.noise_images(images, t)
@@ -364,11 +378,39 @@ def train(epochs):
             epoch_loss += loss.item()
             
         avg_loss = epoch_loss / len(dataloader)
+        
         scheduler.step(avg_loss)
-            
-        if (epoch == 1) or (epoch % 10 == 0):
+        current_lr = optimizer.param_groups[0]['lr']
+        
+        if (epoch == 1) or (epoch % 1000 == 0):
             print("+"*50)
-            print(f"Epoch: {epoch} | Loss: {avg_loss}")
+            print(f"Epoch: {epoch} | Loss: {avg_loss} | Current LR: {current_lr}")
             _, img_list = diffusion.sample(model, n=1)
             fig = create_diffusion_animation(img_list)
-            figh.show()            
+            fig.show()
+
+#-------
+## Train
+#-------
+
+train(4000)
+
+################
+## Save model ##
+################
+
+path = "/home/longdpt/Documents/Long_AISDL/DeepLearning_PyTorch/06_DDPM"
+
+torch.save(obj=model, f=path+"/pokemon_generator.pth")
+
+##############
+## Sampling ##
+##############
+
+model_loaded = torch.load(f=path+"/pokemon_generator.pth", weights_only=False)
+diffusion = Diffusion(img_size=IMG_SIZE, device=device)
+
+for _ in range(10):
+    _, img_list = diffusion.sample(model_loaded, n=1)
+    fig = create_diffusion_animation(img_list)
+    fig.show()
