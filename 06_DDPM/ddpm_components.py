@@ -259,13 +259,15 @@ BATCH_SIZE = 8
 
 from utils import get_data, create_diffusion_animation
 
-def train(model, data, epochs, lr=2e-4, img_size=IMG_SIZE, batch_size=BATCH_SIZE, visualize=False, report_interval=1000):
+def train(model, data, epochs, lr=2e-4, img_size=IMG_SIZE, batch_size=BATCH_SIZE, visualize=False, report_interval=1000, save_path=None):
     dataloader = get_data(img_size=img_size, batch_size=batch_size, img_list=data)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", patience=250, factor=0.8)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", patience=500, factor=0.8)
     loss_fn = nn.MSELoss()
     diffusion = Diffusion(img_size=img_size, device=device)
     l = len(dataloader)
+    
+    best_loss = float('inf')  # Track best loss
 
     for epoch in tqdm(range(1, epochs+1), desc="Training"):
         
@@ -290,6 +292,12 @@ def train(model, data, epochs, lr=2e-4, img_size=IMG_SIZE, batch_size=BATCH_SIZE
             epoch_loss += loss.item()
             
         avg_loss = epoch_loss / len(dataloader)
+        
+        # Save if loss decreased
+        if avg_loss < best_loss:
+            best_loss = avg_loss
+            if save_path != None:
+                torch.save(model, save_path)
         
         scheduler.step(avg_loss)
         current_lr = optimizer.param_groups[0]['lr']

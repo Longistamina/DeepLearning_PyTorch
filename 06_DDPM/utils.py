@@ -5,7 +5,7 @@
 import torch
 
 import torchvision
-from torchvision import transforms
+from torchvision.transforms import v2 as transforms
 from torch.utils.data import DataLoader
 
 import plotly.graph_objects as go
@@ -69,9 +69,9 @@ def save_images(images, path, **kwargs):
 def get_data(img_size, batch_size, img_list=None, path=None):
     preprocess = transforms.Compose([
         transforms.Resize(img_size),
-        transforms.CenterCrop(img_size),
+        #transforms.CenterCrop(img_size),
         transforms.RandomHorizontalFlip(p=0.5),
-        transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.02),
+        #transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.02),
         transforms.ToTensor(),
         transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)
         )
