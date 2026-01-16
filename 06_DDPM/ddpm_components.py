@@ -252,12 +252,13 @@ class UNet(nn.Module):
 ####################
 
 IMG_SIZE = 64
+BATCH_SIZE = 8
 
 torch.manual_seed(42)
 model = UNet().to(device=device)
 
-def train(model, data, epochs, lr=2e-4, img_size=IMG_SIZE, visualize=False, report_interval=1000):
-    dataloader = get_data(img_size=img_size, batch_size=8, img_list=data)
+def train(model, data, epochs, lr=2e-4, img_size=IMG_SIZE, batch_size=BATCH_SIZE, visualize=False, report_interval=1000):
+    dataloader = get_data(img_size=img_size, batch_size=batch_size, img_list=data)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", patience=250, factor=0.8)
     loss_fn = nn.MSELoss()
@@ -303,4 +304,4 @@ def train(model, data, epochs, lr=2e-4, img_size=IMG_SIZE, visualize=False, repo
 ## Train
 #-------
 
-# train(model=model, data=pokemon, epochs=4000, img_size=IMG_SIZE, report_interval=1000, visualize=True)
+# train(model=model, data=pokemon, epochs=4000, img_size=IMG_SIZE, batch_size=BATCH_SIZE, report_interval=1000, visualize=True)

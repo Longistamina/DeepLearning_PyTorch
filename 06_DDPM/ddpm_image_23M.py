@@ -117,6 +117,7 @@ pokemon = pokemon['image']
 ####################
 
 IMG_SIZE = 64
+BATCH_SIZE = 8
 
 torch.manual_seed(42)
 model = UNet().to(device=device)
@@ -127,7 +128,7 @@ model = UNet().to(device=device)
 
 from ddpm_components import train
 
-train(model=model, data=pokemon, epochs=4000, img_size=IMG_SIZE, report_interval=1000, visualize=True)
+train(model=model, data=pokemon, epochs=4000, img_size=IMG_SIZE, batch_size=BATCH_SIZE, report_interval=1000, visualize=True)
 
 ################
 ## Save model ##
