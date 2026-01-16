@@ -407,10 +407,12 @@ torch.save(obj=model, f=path+"/pokemon_generator.pth")
 ## Sampling ##
 ##############
 
-model_loaded = torch.load(f=path+"/pokemon_generator.pth", weights_only=False)
-diffusion = Diffusion(img_size=IMG_SIZE, device=device)
+path = "/home/longdpt/Documents/Long_AISDL/DeepLearning_PyTorch/06_DDPM"
 
-for _ in range(10):
+model_loaded = torch.load(f=path+"/pokemon_generator.pth", weights_only=False)
+diffusion = Diffusion(img_size=64, device=device)
+
+for _ in range(20):
     _, img_list = diffusion.sample(model_loaded, n=1)
     fig = create_diffusion_animation(img_list)
     fig.show()
