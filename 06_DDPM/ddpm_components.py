@@ -257,7 +257,7 @@ BATCH_SIZE = 8
 # torch.manual_seed(42)
 # model = UNet().to(device=device)
 
-from utils import get_data
+from utils import get_data, create_diffusion_animation
 
 def train(model, data, epochs, lr=2e-4, img_size=IMG_SIZE, batch_size=BATCH_SIZE, visualize=False, report_interval=1000):
     dataloader = get_data(img_size=img_size, batch_size=batch_size, img_list=data)

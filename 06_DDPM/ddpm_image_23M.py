@@ -17,6 +17,12 @@ from loguru import logger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+#####################
+## UNet Components ##
+#####################
+
+from ddpm_components import DoubleConv, Down, SelfAttention, Up
+
 ###############
 ## Utilities ##
 ###############
@@ -26,8 +32,6 @@ from utils import get_data, create_diffusion_animation
 #######################
 ## UNet architecture ##
 #######################
-
-from ddpm_components import DoubleConv, Down, SelfAttention, Up
 
 class UNet(nn.Module):
     def __init__(self, in_channels=3, out_channels=3, time_dim=256, device=device): # in_channels and out_channels are all 3 since dealing with RGB images
