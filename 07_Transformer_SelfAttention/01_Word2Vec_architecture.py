@@ -65,18 +65,18 @@ orange = [0.7,  0.2,  0.4,  0.6]
 
 CALCULATING SIMILARITY (Cosine Similarity)
 -----------------------------------------
-Formula: similarity = (A · B) / (||A|| × ||B||)
+Formula: similarity = (A · B) / (||A|| x ||B||)
 
 Example: How similar are "king" and "queen"?
 
-king · queen = (0.5×0.4) + (0.8×0.7) + (0.1×0.9) + (0.2×0.3)
+king · queen = (0.5x0.4) + (0.8x0.7) + (0.1x0.9) + (0.2x0.3)
              = 0.20 + 0.56 + 0.09 + 0.06
              = 0.91
 
 ||king||  = √(0.5² + 0.8² + 0.1² + 0.2²) = √0.94 = 0.97
 ||queen|| = √(0.4² + 0.7² + 0.9² + 0.3²) = √1.15 = 1.07
 
-similarity(king, queen) = 0.91 / (0.97 × 1.07) = 0.88
+similarity(king, queen) = 0.91 / (0.97 x 1.07) = 0.88
 
 
 COMPARING SIMILARITIES
