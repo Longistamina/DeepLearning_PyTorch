@@ -1,53 +1,51 @@
 '''
-WORD2VEC EMBEDDING EXPLANATION
+WORD2VEC ARCHITECTURE EXPLAINED
 
-Word2vec is a technique for learning word embeddings - dense vector 
-representations of words that capture semantic relationships.
+Based on the StatQuest breakdown, 
+Word2Vec is a shallow neural network. 
+Its primary goal is not to perform a classification task, but rather to learn the weights of the hidden layer, 
+which become the "Word Embeddings."
 
-CORE IDEA
---------
-Words that appear in similar contexts should have similar vector 
-representations. For example, "cat" and "dog" should be closer in 
-vector space than "cat" and "airplane".
+Here is the step-by-step architecture:
 
-TWO MAIN ARCHITECTURES
----------------------
+1. THE INPUT (One-Hot Encoding)
+   - The process begins with a corpus of text (the training data).
+   - A vocabulary is created from every unique word in that text.
+   - The input to the network is a "One-Hot Encoded" vector.
+   - If your vocabulary has 10,000 words, the input vector has 10,000 components.
+   - To represent a specific word, the component corresponding to that word is set to "1," and all other components are set to "0."
 
-1. CBOW (Continuous Bag of Words)
-   - Predicts a target word from surrounding context words
-   - Example: Given ["the", "sat", "on", "mat"] → predict "cat"
-   
-2. Skip-gram
-   - Predicts context words from a target word
-   - Example: Given "cat" → predict ["the", "sat", "on", "mat"]
-   - Better for smaller datasets and rare words
+2. THE HIDDEN LAYER (The Embedding Layer)
+   - The input vector is fed into a single hidden layer.
+   - Crucially, this is a Linear Layer—it does not use an activation function (like ReLU or Sigmoid) to curve the data. 
+     It just sums the weighted inputs.
+   - The number of neurons in this layer determines the "dimensionality" of the resulting word embeddings.
+     - In the video example, he might use 2 neurons to visualize it on a 2D graph.
+     - In real-world applications (like Google's dataset), this is often 300 neurons.
+   - The weights connecting the Input Layer to this Hidden Layer are the "Lookup Table." 
+   Since the input is a One-Hot vector, the Hidden Layer effectively just "looks up" the row of weights corresponding to the active input word.
 
-HOW IT WORKS
------------
-1. Start with random vectors for each word
-2. Slide a window through text corpus
-3. Train neural network to predict word relationships
-4. The learned hidden layer weights become word embeddings
+3. THE OUTPUT LAYER (Softmax)
+   - The Hidden Layer connects to the Output Layer.
+   - The Output Layer has the same number of neurons as the Input Layer (e.g., 10,000 neurons for a 10,000-word vocabulary).
+   - This layer uses the "Softmax" activation function.
+   - Softmax ensures the output is a probability distribution (all values sum to 1).
+   - The output represents the probability of every other word in the vocabulary appearing near the input word (context).
 
-RESULTING PROPERTIES
--------------------
-- Each word → fixed-size dense vector (e.g., 300 dimensions)
-- Semantic similarity: similar(king, queen) > similar(king, apple)
-- Analogies: king - man + woman ≈ queen
-- Mathematical operations become meaningful
+4. TRAINING PROCESS (Skip-Gram Version)
+   - The network is trained using pairs of words found in the text (Target Word, Context Word).
+   - Example sentence: "The quick brown fox."
+   - Training pair: (quick, brown).
+   - Input: "quick" (One-Hot).
+   - The network predicts probabilities.
+   - The error is calculated by comparing the predicted probabilities against the actual target "brown" (One-Hot).
+   - Backpropagation adjusts the weights to minimize this error.
 
-ADVANTAGES
-----------
-- Captures semantic meaning
-- Reduces dimensionality vs one-hot encoding
-- Enables transfer learning
-- Fast training with negative sampling
-
-TYPICAL USE
------------
-Pre-trained embeddings (Google News, Wikipedia) used as input 
-features for downstream NLP tasks like sentiment analysis, 
-translation, or text classification.
+5. THE RESULT
+   - Once training is complete, the Output Layer is discarded.
+   - We only care about the weights matrix in the Hidden Layer.
+   - These weights are the coordinates (vectors) for the words.
+   - Words that appear in similar contexts (like "cool" and "cold") will have similar vector values, placing them close together in the vector space.
 
 #########################################################################################
 
