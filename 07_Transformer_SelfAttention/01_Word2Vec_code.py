@@ -1,338 +1,267 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
+import re
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# ============================================================
-# WORD2VEC SKIP-GRAM MODEL IN PYTORCH
-# ============================================================
-
-class SkipGramModel(nn.Module):
-    """
-    Skip-gram model: predict context words from target word
-    """
-    def __init__(self, vocab_size, embedding_dim):
-        super(SkipGramModel, self).__init__()
-        
-        # Input embedding (target word)
-        self.target_embeddings = nn.Embedding(vocab_size, embedding_dim)
-        
-        # Output embedding (context word)
-        self.context_embeddings = nn.Embedding(vocab_size, embedding_dim)
-        
-        # Initialize with small random values
-        self.target_embeddings.weight.data.uniform_(-0.5/embedding_dim, 
-                                                      0.5/embedding_dim)
-        self.context_embeddings.weight.data.uniform_(-0.5/embedding_dim, 
-                                                       0.5/embedding_dim)
-    
-    def forward(self, target_word, context_word):
-        # Get embeddings
-        target_embed = self.target_embeddings(target_word)    # [batch, embed_dim]
-        context_embed = self.context_embeddings(context_word)  # [batch, embed_dim]
-        
-        # Compute dot product (similarity)
-        score = torch.sum(target_embed * context_embed, dim=1)
-        
-        return score
-
-# ============================================================
-# DATA PREPARATION
-# ============================================================
-
-# Sample corpus
-corpus = [
-    "the cat sat on the mat",
-    "the dog sat on the log",
-    "cats and dogs are animals",
-    "the cat and dog are friends"
+# 1. DATA PREPARATION
+# -------------------
+english = [
+    "Better late than never",
+    "Actions speak louder than words",
+    "When the cat's away, the mice will play",
+    "Don't count your chickens before they hatch",
+    "The early bird catches the worm"
 ]
 
-# Tokenize
-tokens = []
-for sentence in corpus:
-    tokens.extend(sentence.lower().split())
+french = [
+    "Mieux vaut tard que jamais",
+    "Les actes valent mieux que les paroles",
+    "Quand le chat n'est pas là, les souris dansent",
+    "Il ne faut pas vendre la peau de l'ours avant de l'avoir tué",
+    "L'avenir appartient à ceux qui se lèvent tôt"
+]
 
-print(f"Total tokens: {len(tokens)}")
-print(f"Sample tokens: {tokens[:10]}")
+# Combine corpus
+corpus = english + french
+
+for _, proverb in enumerate(corpus):
+    print(proverb)
 '''
-Total tokens: 23
-Sample tokens: ['the', 'cat', 'sat', 'on', 'the', 'mat', 'the', 'dog', 'sat', 'on']
+Better late than never
+Actions speak louder than words
+When the cat's away, the mice will play
+Don't count your chickens before they hatch
+The early bird catches the worm
+Mieux vaut tard que jamais
+Les actes valent mieux que les paroles
+Quand le chat n'est pas là, les souris dansent
+Il ne faut pas vendre la peau de l'ours avant de l'avoir tué
+L'avenir appartient à ceux qui se lèvent tôt
 '''
 
-# Build vocabulary
-from collections import Counter
-word_counts = Counter(tokens)
-vocab = {word: idx for idx, (word, _) in enumerate(word_counts.most_common())}
-idx_to_word = {idx: word for word, idx in vocab.items()}
+# Simple preprocessing: lowercase and remove punctuation
+def clean_text(text):
+    # Keep only alphanumeric characters and normalize case
+    return re.findall(r'\b\w+\b', text.lower())
 
-vocab_size = len(vocab)
-print(f"\nVocabulary size: {vocab_size}")
-print(f"Vocabulary: {list(vocab.keys())}")
-'''
-Vocabulary size: 13
-Vocabulary: ['the', 'cat', 'sat', 'on', 'dog', 'and', 'are', 'mat', 'log', 'cats', 'dogs', 'animals', 'friends']
-'''
+tokenized_corpus = [clean_text(sentence) for sentence in corpus]
 
-# ============================================================
-# CREATE TRAINING PAIRS (Skip-gram)
-# ============================================================
+for _, sentence in enumerate(tokenized_corpus):
+    print(sentence)
+# ['better', 'late', 'than', 'never']
+# ['actions', 'speak', 'louder', 'than', 'words']
+# ['when', 'the', 'cat', 's', 'away', 'the', 'mice', 'will', 'play']
+# ['don', 't', 'count', 'your', 'chickens', 'before', 'they', 'hatch']
+# ['the', 'early', 'bird', 'catches', 'the', 'worm']
+# ['mieux', 'vaut', 'tard', 'que', 'jamais']
+# ['les', 'actes', 'valent', 'mieux', 'que', 'les', 'paroles']
+# ['quand', 'le', 'chat', 'n', 'est', 'pas', 'là', 'les', 'souris', 'dansent']
+# ['il', 'ne', 'faut', 'pas', 'vendre', 'la', 'peau', 'de', 'l', 'ours', 'avant', 'de', 'l', 'avoir', 'tué']
+# ['l', 'avenir', 'appartient', 'à', 'ceux', 'qui', 'se', 'lèvent', 'tôt']
 
-def create_skipgram_dataset(tokens, vocab, window_size=2):
-    """
-    Create (target, context) pairs
-    """
-    pairs = []
-    
-    for i, target_word in enumerate(tokens):
-        target_idx = vocab[target_word]
+# Build Vocabulary
+vocabulary = set(word for sentence in tokenized_corpus for word in sentence) # {'à', 'speak', 'l', 'chat', 'tôt', 'your', 's', ...}
+word2idx = {word: i for i, word in enumerate(vocabulary)} # {'word0': 0, 'word1': 1, ...}
+idx2word = {i: word for word, i in word2idx.items()} # {0: 'word0', 1: 'word1'}
+
+vocab_size = len(vocabulary)
+print(vocab_size) # 66
+
+# 2. CREATE TRAINING DATA (Skip-gram)
+# -----------------------------------
+# Pairs of (Center Word, Context Word)
+data = []
+window_size = 2  # Look 2 words to the left and 2 to the right
+
+for sentence in tokenized_corpus:
+    for idx, word in enumerate(sentence):
+        # Define window boundaries
+        start = max(idx - window_size, 0)
+        end = min(idx + window_size + 1, len(sentence))
         
-        # Get context words within window
-        start = max(0, i - window_size)
-        end = min(len(tokens), i + window_size + 1)
+        # Add pairs
+        for context_word in sentence[start:end]:
+            if context_word != word: # Don't pair word with itself
+                data.append((word2idx[word], word2idx[context_word]))
+'''
+Illustrate one iteration:
+
+# sentence = ["the", "early", "bird", "catches", "the", "worm"]
+# word = "bird"
+# idx = 2  (0-based index of "bird")
+# window_size = 2
+
+start = max(idx - window_size, 0)
+# start = max(2 - 2, 0) -> 0
+# The window starts at index 0 ("the")
+
+end = min(idx + window_size + 1, len(sentence))
+# end = min(2 + 2 + 1, 6) -> 5
+# The window ends at index 5 (Python slices are exclusive, so it stops before index 5)
+
+sentence[start:end] = sentence[0:5] = ["the", "early", "bird", "catches", "the"]
+
+Generate pairs:
+# Iteration 1:
+  + context_word = "the"
+  + Is "the" == "bird"? -> No.
+  + Result: Append pair ("bird", "the")
+  
+# Iteration 2:
+  + context_word = "early"
+  + Is "early" == "bird"? No.
+  + Result: Append pair ("bird", "early")
+... (and so on) ...
+
+sentence[start:end] = sentence[0:5] = ["the", "early", "bird", "catches", "the"]
+=> This basically means pair the word "bird" with all other words within ± window_size (except itself)
+=> [('bird', 'the'), ('bird', 'early'), ('bird', 'catches'), ('bird', 'the')]
+'''
+
+#######################
+'''
+NOTE: here, if we choose window_size=1
+=> "late" and "never" will not be matched as training pair
+=> their similarity score later on will be very slow
+'''
+#######################
+
+print(f"Total training pairs: {len(data)}")
+print(f"Example pair: {idx2word[data[0][0]]} -> {idx2word[data[0][1]]}")
+# Total training pairs: 252
+# Example pair: better -> late
+
+# 3. MODEL ARCHITECTURE
+# ---------------------
+class Word2Vec(nn.Module):
+    def __init__(self, vocab_size, embedding_dim):
+        super().__init__()
         
-        for j in range(start, end):
-            if i != j:  # Don't pair word with itself
-                context_word = tokens[j]
-                context_idx = vocab[context_word]
-                pairs.append((target_idx, context_idx))
-    
-    return pairs
+        # HIDDEN LAYER (The Embeddings)
+        # Note: In Pytorch, nn.Embedding is optimized 'One-hot * Linear_Layer'BaseExceptionGroup
+        # This replaces the massive matrix multiplication of One-Hot vectors
+        self.embeddings = nn.Embedding(vocab_size, embedding_dim)
+        
+        # OUTPUT LAYER
+        # Projects from hidden dimension back to vocabulary size
+        self.linear = nn.Linear(embedding_dim, vocab_size)
+        
+    def forward(self, inputs):
+        # Inputs (Index number of the word) -> Hidden Layer (Vector)
+        embeds = self.embeddings(inputs)
+        
+        # Hidden Layer -> Output Layer (Raw Scores)
+        out = self.linear(embeds)
+        
+        # Note: We don't apply Softmax here because CrossEntropyLoss in training step will does this automatically
+        return out
 
-window_size = 2
-training_pairs = create_skipgram_dataset(tokens, vocab, window_size)
+#########################
+## Initialize Word2Vec ##
+#########################
 
-print(f"\nTraining pairs: {len(training_pairs)}")
-print("Sample pairs (target -> context):")
-for i in range(5):
-    target_idx, context_idx = training_pairs[i]
-    print(f"  {idx_to_word[target_idx]} -> {idx_to_word[context_idx]}")
+# Hyperparameters
+EMBEDDING_DIM = 10 # Small dimension for small dataset
+LEARNING_RATE = 0.001
+EPOCHS = 10000
 
-'''
-Training pairs: 86
-Sample pairs (target -> context):
-  the -> cat
-  the -> sat
-  cat -> the
-  cat -> sat
-  cat -> on
-'''
+model = Word2Vec(vocab_size, EMBEDDING_DIM)
+loss_fn = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-# ============================================================
-# TRAINING WITH NEGATIVE SAMPLING
-# ============================================================
+print(f'{sum(p.numel() for p in model.parameters()):,}')
+# 1,386
 
-embedding_dim = 50
-learning_rate = 0.025
-epochs = 100
-num_negative_samples = 5
-
-model = SkipGramModel(vocab_size, embedding_dim).to(device)
-optimizer = optim.SGD(model.parameters(), lr=learning_rate)
-
-# Word frequency for negative sampling
-word_freqs = np.array([word_counts[idx_to_word[i]] for i in range(vocab_size)])
-word_freqs = word_freqs ** 0.75  # Smooth distribution
-word_freqs = word_freqs / word_freqs.sum()
-
-
+# 4. TRAINING LOOP
+# ----------------
 from tldm import tldm
 
-for epoch in tldm(range(epochs), desc='Training'):
+for epoch in tldm(range(EPOCHS), desc='Training'):
     total_loss = 0
     
-    for target_idx, context_idx in training_pairs:
-        # Positive pair
-        target = torch.LongTensor([target_idx]).to(device)
-        context = torch.LongTensor([context_idx]).to(device)
-        
-        # Positive score (should be high)
-        pos_score = model(target, context)
-        pos_loss = -torch.log(torch.sigmoid(pos_score))
-        
-        # Negative sampling
-        neg_indices = np.random.choice(vocab_size, 
-                                       size=num_negative_samples, 
-                                       p=word_freqs)
-        neg_indices = torch.LongTensor(neg_indices).to(device)
-        
-        # Negative scores (should be low)
-        neg_scores = model(target.repeat(num_negative_samples), neg_indices)
-        neg_loss = -torch.sum(torch.log(torch.sigmoid(-neg_scores)))
-        # Example:
-        # target_idx = 3  (word "cat")
-        # num_negative_samples = 5
-        # neg_indices = [7, 2, 9, 1, 4]  (random "wrong" words)
-        # target.repeat(num_negative_samples)         ->        [3, 3, 3, 3, 3]
-        # compare "cat" against each negative sample            [7, 2, 9, 1, 4]
-        # model([3, 3, 3, 3, 3], [7, 2, 9, 1, 4]) 
-        #  -> neg_scores = [0.8, -0.3, 1.2, 0.1, -0.5]
-        #  - High score (0.8, 1.2) = BAD! "cat" is similar to negative sample
-        #  - Low score (-0.3, -0.5) = GOOD! "cat" is dissimilar to negative sample
-        #
-        # neg_loss = -torch.sum(torch.log(torch.sigmoid(-neg_scores)))
-        # -> Make neg_scores LOW (we want dissimilarity)
-        # -neg_scores: [-0.8, 0.3, -1.2, -0.1, 0.5] => Why negate? Because sigmoid(-x) is high when x is low
-        # sigmoid(x): [0.31, 0.57, 0.23, 0.48, 0.62]
-        # - If neg_score was high (0.8) → sigmoid(-0.8) = 0.31 (low)
-        # - If neg_score was low (-0.5) → sigmoid(0.5) = 0.62 (high)
-        
-        # Total loss
-        loss = pos_loss + neg_loss
-        
-        # Backpropagation
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        
-        total_loss += loss.item()
+    # Convert data to tensors
+    # In a real scenario, you would use a DataLoader for batches
+    inputs = torch.tensor([pair[0] for pair in data]) # Indices of Center words
+    targets = torch.tensor([pair[1] for pair in data]) # Indices of Context words
     
-    if (epoch + 1) % 20 == 0:
-        print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss:.4f}")
-
+    # Forward pass
+    log_probs = model(inputs)
+    
+    # Compute Loss
+    loss = loss_fn(log_probs, targets)
+    
+    # Zero gradients
+    model.zero_grad()
+    
+    # Backward pass (Update weights)
+    loss.backward()
+    optimizer.step()
+    
+    total_loss += loss.item()
+    
+    if (epoch+1) % 1000 == 0:
+        print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}")
 '''
-Training:  23%|███████████████████████████▊                                                                                             | 23/100 [00:01<00:03, 22.64it/s]
-Epoch 20/100, Loss: 236.3641
-Training:  44%|█████████████████████████████████████████████████████▏                                                                   | 44/100 [00:01<00:02, 25.47it/s]
-Epoch 40/100, Loss: 230.5507
-Training:  65%|██████████████████████████████████████████████████████████████████████████████▋                                          | 65/100 [00:02<00:01, 25.58it/s]
-Epoch 60/100, Loss: 219.7868
-Training:  83%|████████████████████████████████████████████████████████████████████████████████████████████████████▍                    | 83/100 [00:03<00:00, 25.63it/s]
-Epoch 80/100, Loss: 210.4355
-Training: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [00:04<00:00,  3.00it/s]
-Epoch 100/100, Loss: 200.8782
+Training:  16%|█▌        | 1555/10000 [00:00<00:03, 2858.07it/s]
+Epoch 1000, Loss: 1.5955
+Training:  24%|██▍       | 2435/10000 [00:00<00:02, 2895.02it/s]
+Epoch 2000, Loss: 1.4184
+Training:  33%|███▎      | 3323/10000 [00:01<00:02, 2931.69it/s]
+Epoch 3000, Loss: 1.4003
+Training:  45%|████▌     | 4547/10000 [00:01<00:01, 3040.42it/s]
+Epoch 4000, Loss: 1.3954
+Training:  55%|█████▍    | 5469/10000 [00:01<00:01, 3014.43it/s]
+Epoch 5000, Loss: 1.3935
+Training:  64%|██████▍   | 6382/10000 [00:02<00:01, 2740.34it/s]
+Epoch 6000, Loss: 1.3927
+Training:  76%|███████▌  | 7606/10000 [00:02<00:00, 2972.53it/s]
+Epoch 7000, Loss: 1.3923
+Training:  85%|████████▌ | 8504/10000 [00:02<00:00, 2942.82it/s]
+Epoch 8000, Loss: 1.3921
+Training:  94%|█████████▍| 9412/10000 [00:03<00:00, 2978.56it/s]
+Epoch 9000, Loss: 1.3920
+Training: 100%|██████████| 10000/10000 [00:03<00:00, 301.49it/s]
+Epoch 10000, Loss: 1.3919
 '''
 
-# ============================================================
-# EXTRACT TRAINED EMBEDDINGS
-# ============================================================
+# 5. EXTRACTING EMBEDDINGS
+# ------------------------
+# We only care about the hidden layer weights
+word_embeddings = model.embeddings.weight.data
 
-embeddings = model.target_embeddings.weight.data.cpu().numpy()
+# Function to calculate Cosine Similarity
+def get_similarity(word1, word2):
+    if (word1 not in word2idx) or (word2 not in word2idx):
+        return "Word not in vocab"
+    
+    # Get vectors
+    vec1 = word_embeddings[word2idx[word1]]
+    vec2 = word_embeddings[word2idx[word2]]
+    
+    # Calculate cosine similarity manually
+    dot_product = torch.dot(vec1, vec2)
+    norm1 = torch.norm(vec1)
+    norm2 = torch.norm(vec2)
+    
+    similarity = dot_product / (norm1 * norm2)
+    return similarity.item()
 
-print(f"\n{'='*60}")
-print("TRAINED EMBEDDINGS")
-print(f"{'='*60}")
-print(f"Shape: {embeddings.shape}")
-print(f"\nWord 'cat' embedding (first 10 dims):")
-print(embeddings[vocab['cat']][:10])
+print("\n--- RESULTS ---")
+print("Similarity between 'late' and 'never':")
+print(f"{get_similarity('late', 'never'):.4f}")
 
+print("Similarity between 'cat' and 'mice':")
+print(f"{get_similarity('cat', 'mice'):.4f}")
+
+print("Similarity between 'late' and 'bird' (Unrelated):")
+print(f"{get_similarity('late', 'bird'):.4f}")
 '''
-============================================================
-TRAINED EMBEDDINGS
-============================================================
-Shape: (13, 50)
+Similarity between 'late' and 'never':
+0.3748
 
-Word 'cat' embedding (first 10 dims):
-[ 0.01814973 -0.5085046   0.14865027  0.1861113  -0.13569748  0.04037447
- -0.07867606  0.00525767 -0.3990992   0.18380988]
+Similarity between 'cat' and 'mice':
+0.4199
+
+Similarity between 'late' and 'bird' (Unrelated):
+0.1300
 '''
-
-# ============================================================
-# COMPUTE SIMILARITIES
-# ============================================================
-
-def cosine_similarity(vec1, vec2):
-    """Calculate cosine similarity between two vectors"""
-    dot_product = np.dot(vec1, vec2)
-    norm1 = np.linalg.norm(vec1)
-    norm2 = np.linalg.norm(vec2)
-    return dot_product / (norm1 * norm2)
-
-
-def find_most_similar(word, vocab, embeddings, top_k=5):
-    """Find most similar words"""
-    if word not in vocab:
-        return []
-    
-    word_idx = vocab[word]
-    word_vec = embeddings[word_idx]
-    
-    similarities = []
-    for idx in range(len(embeddings)):
-        if idx != word_idx:
-            sim = cosine_similarity(word_vec, embeddings[idx])
-            similarities.append((idx, sim))
-    
-    similarities.sort(key=lambda x: x[1], reverse=True)
-    
-    return [(idx_to_word[idx], sim) for idx, sim in similarities[:top_k]]
-
-
-print(f"\n{'='*60}")
-print("WORD SIMILARITIES")
-print(f"{'='*60}")
-
-test_words = ['cat', 'dog', 'sat']
-for word in test_words:
-    if word in vocab:
-        print(f"\nMost similar to '{word}':")
-        similar = find_most_similar(word, vocab, embeddings, top_k=3)
-        for similar_word, sim in similar:
-            print(f"  {similar_word}: {sim:.4f}")
-            
-'''
-============================================================
-WORD SIMILARITIES
-============================================================
-
-Most similar to 'cat':
-  mat: 0.7801
-  log: 0.7175
-  sat: 0.7101
-
-Most similar to 'dog':
-  the: 0.8487
-  dogs: 0.6186
-  log: 0.5724
-
-Most similar to 'sat':
-  mat: 0.9713
-  cat: 0.7101
-  on: 0.6464
-'''
-
-# ============================================================
-# WORD ANALOGY: king - man + woman ≈ queen
-# ============================================================
-
-def word_analogy(word_a, word_b, word_c, vocab, embeddings, idx_to_word):
-    """
-    Solve analogy: word_a is to word_b as word_c is to ?
-    Example: king - man + woman ≈ queen
-    """
-    if word_a not in vocab or word_b not in vocab or word_c not in vocab:
-        return None
-    
-    vec_a = embeddings[vocab[word_a]]
-    vec_b = embeddings[vocab[word_b]]
-    vec_c = embeddings[vocab[word_c]]
-    
-    # Analogy vector: (a - b) + c
-    target_vec = vec_a - vec_b + vec_c
-    
-    # Find closest word
-    best_word = None
-    best_sim = -1
-    
-    for idx in range(len(embeddings)):
-        word = idx_to_word[idx]
-        if word not in [word_a, word_b, word_c]:
-            sim = cosine_similarity(target_vec, embeddings[idx])
-            if sim > best_sim:
-                best_sim = sim
-                best_word = word
-    
-    return best_word, best_sim
-
-
-print(f"\n{'='*60}")
-print("WORD ANALOGIES")
-print(f"{'='*60}")
-
-# Example: cat - mat + log ≈ dog (from our corpus)
-if all(w in vocab for w in ['cat', 'mat', 'log']):
-    result, sim = word_analogy('cat', 'mat', 'log', vocab, embeddings, idx_to_word)
-    print(f"\ncat - mat + log ≈ {result} (similarity: {sim:.4f})")
-# cat - mat + log ≈ dogs (similarity: 0.6260)
