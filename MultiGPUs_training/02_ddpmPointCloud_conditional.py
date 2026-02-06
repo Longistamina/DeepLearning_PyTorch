@@ -1,17 +1,19 @@
 import os
 import torch
 import torch.distributed as dist
-import scipy.io as scp
 from pathlib import Path
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 from torch_geometric.loader import DataLoader
-from components import PointCloudDataset, Diffusion, DiffusionWrapper
+from components import Diffusion, DiffusionWrapper
+from utils import PointCloudDataset, PairDataset, gmm_downsample
 from models import GenSNUPI
 from tldm import tldm
 
 import warnings
 warnings.filterwarnings('ignore')
+
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # ==========================================
 # 1. SETUP DDP
@@ -52,19 +54,50 @@ def main():
     # ----------------------
     # A. DATASET
     # ----------------------
-    data_folder = Path('block_Lattice_designs')
-    point_clouds = []
+    from torch_geometric.datasets import ShapeNet
+    root_path = Path('./data/ShapeNet')
     
-    # Load data (Every process does this, but it's fast enough)
-    # Ideally, load once and broadcast, but for simple lists this is fine.
-    for entry in data_folder.iterdir():
-        try:
-            dna = scp.loadmat(entry)
-            point_clouds.append(dna.get('finl_coord')[:, :3].astype('float32'))
-        except:
-            continue
-            
-    dataset = PointCloudDataset(point_clouds=point_clouds[2:-2])
+    categories = ['Airplane', 'Motorbike', 'Car']
+    shapenet = ShapeNet(
+        root=root_path, 
+        categories=categories,
+        pre_transform=None
+    )
+    
+    indices = []
+    counts = {0: 0, 1: 0, 2: 0}
+    target_count = 4
+
+    for i in range(len(shapenet)):
+        label = shapenet[i].category.item()
+        if counts[label] < target_count:
+            indices.append(i)
+            counts[label] += 1
+        
+        # Stop if we found 10 for all 3 categories
+        if all(c >= target_count for c in counts.values()):
+            break
+
+    # 3. Create the subset
+    dataset = shapenet[torch.tensor(indices)]
+    del shapenet
+    
+    point_clouds = []
+    for _, data in enumerate(dataset):
+        point_clouds.append(data.pos)
+        # [:10] are Airplane
+        # [10:20] are Motorbike
+        # [20:] are Car
+        
+    dataset = PointCloudDataset(point_clouds=point_clouds)
+
+    target_shapes = []
+    for shape in tldm(point_clouds, desc='Preprocessing target shapes', disable=(not is_master)):
+        shape_downsampled = gmm_downsample(shape, n_points=1000, n_components=30, covariance_type='full', random_state=42)
+        target_shapes.append(shape_downsampled)
+    target_shapes = PointCloudDataset(point_clouds=target_shapes)
+    
+    combined_dataset = PairDataset(dataset, target_shapes)
 
     # ----------------------
     # B. SAMPLER & LOADER (The "ListLoader" Replacement)
@@ -72,11 +105,11 @@ def main():
     # DistributedSampler splits the data:
     # Rank 0 gets indices [0, 2, 4...]
     # Rank 1 gets indices [1, 3, 5...]
-    sampler = DistributedSampler(dataset, shuffle=True)
+    sampler = DistributedSampler(combined_dataset, shuffle=True)
     
     train_loader = DataLoader(
-        dataset,
-        batch_size=1,       # Batch size PER GPU
+        combined_dataset,
+        batch_size=3,       # Batch size PER GPU
         sampler=sampler,    # Crucial!
         shuffle=False,      # Sampler handles shuffle, so set this to False
         num_workers=4,
@@ -89,12 +122,12 @@ def main():
     # Initialize components
     diffusion = Diffusion(device=f'cuda:{local_rank}')
     base_model = GenSNUPI(
-        hidden_dim=64,
-        num_layers=8,
+        hidden_dim=96,
+        num_layers=6,
         num_heads=8,
-        time_embed_dim=64,
-        k_nn=20,
-        k_random=40,
+        time_embed_dim=128,
+        k_nn=40,
+        k_random=60,
         device='cuda'
     )
     
@@ -102,9 +135,9 @@ def main():
         print(f'Total parameters: {sum(p.numel() for p in base_model.parameters()):,}')
     
     # Load weights (Ensure map_location is set to the local GPU)
-    if os.path.exists('./save/fourth_model.pth'):
+    if os.path.exists('./conditional/save/02_model_best.pth'):
         map_location = {'cuda:0': f'cuda:{local_rank}'}
-        state_dict = torch.load('./save/fourth_model.pth', map_location=map_location)
+        state_dict = torch.load('./conditional/save/02_model_best.pth', map_location=map_location)
         base_model.load_state_dict(state_dict)
         if is_master: print("Loaded previous weights.")
 
@@ -138,14 +171,15 @@ def main():
         local_loss_sum = 0.0
         
         for batch in train_loader:
-            # Move batch to local GPU
-            batch = batch.to(local_rank)
-            
-            optimizer.zero_grad()
+            inputs, target_shapes = batch
+            inputs = inputs.to(f'cuda:{local_rank}')
+            target_shapes = target_shapes.to(f'cuda:{local_rank}')
+            batch_size = inputs.num_graphs 
             
             # Forward pass (Wrapper handles noise/t/loss)
-            loss = model(batch)
+            loss = model(inputs, target_shapes)
             
+            optimizer.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
@@ -167,7 +201,7 @@ def main():
             if current_loss < best_loss:
                 best_loss = current_loss
                 # Use model.module to unwrap DDP before saving
-                torch.save(model.module.model.state_dict(), './save/fourth_model_v2_best.pth')
+                torch.save(model.module.model.state_dict(), './conditional/save/02_model_best.pth')
                 print(f"⭐ New Best! Epoch {epoch} | Loss: {best_loss:.6f}")            
                 
             current_lr = optimizer.param_groups[0]['lr']
@@ -178,7 +212,7 @@ def main():
             # Save Checkpoint
             if epoch % 25000 == 0:
                 # Access .module to save the underlying weights, not the DDP shell
-                torch.save(model.module.model.state_dict(), f'./save/fourth_model_v2_{epoch}.pth')
+                torch.save(model.module.model.state_dict(), f'./conditional/save/02_model_{int(epoch//1000)}k.pth')
 
         scheduler.step()
 
@@ -195,7 +229,11 @@ if __name__ == "__main__":
 # 1. Force use of only the two matching GPUs (e.g. 0 and 1)
 export CUDA_VISIBLE_DEVICES=0,1
 
-# 2. Run with torchrun (Replace 2 with the number of GPUs you exported above)
+# 2. Add flags to allow mutual communication between GPUs (same architecture)
+export NCCL_P2P_DISABLE=0
+export NCCL_IB_DISABLE=0
+
+# 3. Run with torchrun (Replace 2 with the number of GPUs you exported above)
 torchrun --nproc_per_node=2 /home/ssdl/Documents/genSNUPI/04_4th_ddpm3D_blck_selfattention.py
 
 #-----------------------------------#
