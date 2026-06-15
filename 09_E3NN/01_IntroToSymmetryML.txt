@@ -35,7 +35,7 @@ This is brute force, very expensive, and needs about 500 fold augmentation
 
 #########
 
-2) Invariant model: f(g(x)) = f(x)
+2) Invariant model: f(g(x), w) = f(x, w) # w is learnable weights
 Inputs change, but outputs stay the same.
 
 In invariant models, we pre-compute invariant features (edge length, angles, etc),
@@ -45,11 +45,11 @@ So, even when the coordinates change due to rotation, translation and inversion 
 the invariant features still stay the same
 -> hence, the model will produce the same output.
 
-That's why: f(g(x)) = f(x)
+That's why: f(g(x), w) = f(x, w)
 
 #########
 
-3) Equivariant model: f(g(x)) = g(f(x))
+3) Equivariant model: f(g(x), w) = g(f(x, w))
 Inputs change, the outputs change accordingly
 
 So, in the equivariant models, we need both coordinates and invariant features.
@@ -71,3 +71,55 @@ This square matrix (resulted from outer_product) contains:
 So, by limiting the model to equivariant functions,
 we can substantially shrink the space of functions we need to optimize over
 => Train on limited small number of data but can still work well
+
+=====================================================================================
+
+We use e3nn (E3NN) library to build equivariant networks
+
+E3NN = euclidean-3 space neural network
+     = neural networks + representation theory
+
+Representation theory is a branch in mathematic that studies
+how do things change when we act on them with certain operations.
+
+Representation theory we use here is the "group theory"
+-> It studies how things transform under group action
+(point groups, space groups, selection rules, symmetry allowed / forbidden properties)
+
+More specifically, that is Euclidean group:
++ rotations
++ translations
++ mirrors
++ inversions
++ screws
++ glides ...
+
+Remind the formula again:
+    f(g(x), w) = g(f(x, w))
+
+The ``g()`` functions here are the rotations, translations, inversions
+
+To achieve the euivariance, we must split the operations into
++ Learned radial functions
++ Spherical harmonics
+
+=====================================================================================
+
+EXAMPLE:
+
+Let's assume we have two points of mass like this
+
+geometry = [[x0, y0, z0], # coordinates
+            [x1, y1, z1]]
+
+features = [[m0, v0x, v0y, v0z, a0x, a0y, a0z], # m=mass, v=velocity, a=acceleration
+            [m1, v1x, v1y, v1z, a1x, a1y, a1z]
+
+Then, we have to use e3nn to categorize our features
+by how they transform under rotations, parity or inversions, ...
+=> Use irreducible representations
+
+scalar = e3nn.o3.Irrep("0e) # L=0, even p
+vector = e3nn.o3.Irrep("1o") # L=1, odd p
+
+irreps = 1*scalar + 1*vector + 1*vector
