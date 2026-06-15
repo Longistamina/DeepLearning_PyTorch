@@ -1,0 +1,73 @@
+https://www.youtube.com/watch?v=q9EwZsHY1sk&list=PLx3xbphkO3qIlBoESkbafXaDtr0tq5iRd
+
+======================================================================================
+
+In machine learning, coordinates (both 2D and 3D) are most general,
+but they are they are sensitive to translations, rotations, and inversion.
+It means that, when we apply translations, rotations and inversions,
+the coordinate values will change a lot.
+-> make the model fail to produce expected outcome
+
+For example, during training, the model learn the geometry of a triangle A.
+Then, when inferencing, we rotate and translate the triangle A a little bit.
+The geometric features of triangle A still stay the same (edge length, angles),
+but the coordinates of the vertices change
+-> The model fail to work with the new vertices' coordinates.
+
+=====================================================================================
+
+So will we help the model learns the core geometric features,
+and can perform well even with rotated, translated and inversed inputs
+
+Several solutions:
+1) Data Augmentation (not recommended):
+2) Invariant model (pretty well):          f(g(x)) = f(x) (inputs change, but outputs stay the same)
+3) Equivariant model (highly recommended): f(g(x)) = g(f(x)) (inputs change, outputs change the same way)
+
+
+#########
+
+1) Data Augmentation:
+At every new epoch, we let the model sees a different set of coordinates (still the same shape),
+so that after the whole training run, the model will see the same shape with multiple coordinate values.
+
+This is brute force, very expensive, and needs about 500 fold augmentation
+
+#########
+
+2) Invariant model: f(g(x)) = f(x)
+Inputs change, but outputs stay the same.
+
+In invariant models, we pre-compute invariant features (edge length, angles, etc),
+and train the model with these invariant features only, throw away the coordinates.
+
+So, even when the coordinates change due to rotation, translation and inversion (the g(x)),
+the invariant features still stay the same
+-> hence, the model will produce the same output.
+
+That's why: f(g(x)) = f(x)
+
+#########
+
+3) Equivariant model: f(g(x)) = g(f(x))
+Inputs change, the outputs change accordingly
+
+So, in the equivariant models, we need both coordinates and invariant features.
+That's why the interaction in equivariant models are much much more complex
+
+How invariant objects interact?
++ scalar * scalar = scalar
++ vector * scalar = scaled vector (same direction, different magnitude)
+
+How equivariant objects interact? -> use Geometric Tensor Products
+-> vector <outer_product> vector = square matrix
+                                 = dot product + cross product + symmetric traceless
+
+This square matrix (resulted from outer_product) contains:
++ dot product (invr), trace (the diagonal), L=0, degree of freedom = 1 (requires 1 number to describe)
++ cross product (equivr), antisymmetric components (triu and tril), L=1, degree of freedom = 3 (requires 3 numbers to describe)
++ symmetric traceless (equivr), L=2, degree of freedom = 5 (requires 5 numbers to describe)
+
+So, by limiting the model to equivariant functions,
+we can substantially shrink the space of functions we need to optimize over
+=> Train on limited small number of data but can still work well
