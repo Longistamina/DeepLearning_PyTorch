@@ -21,8 +21,8 @@ and can perform well even with rotated, translated and inversed inputs
 
 Several solutions:
 1) Data Augmentation (not recommended):
-2) Invariant model (pretty well):          f(g(x)) = f(x) (inputs change, but outputs stay the same)
-3) Equivariant model (highly recommended): f(g(x)) = g(f(x)) (inputs change, outputs change the same way)
+2) Invariant model (pretty well):          f(D(g)x) = f(x) (inputs change, but outputs stay the same)
+3) Equivariant model (highly recommended): f(D(g)x) = D'(g)f(x) (inputs change, outputs change accordingly)
 
 
 #########
@@ -35,22 +35,26 @@ This is brute force, very expensive, and needs about 500 fold augmentation
 
 #########
 
-2) Invariant model: f(g(x), w) = f(x, w) # w is learnable weights
+2) Invariant model: f(D(g)x, w) = f(x, w) # w is learnable weights
 Inputs change, but outputs stay the same.
 
 In invariant models, we pre-compute invariant features (edge length, angles, etc),
 and train the model with these invariant features only, throw away the coordinates.
 
-So, even when the coordinates change due to rotation, translation and inversion (the g(x)),
+So, even when the coordinates change due to rotation, translation and inversion (the D(g)x),
 the invariant features still stay the same
 -> hence, the model will produce the same output.
 
-That's why: f(g(x), w) = f(x, w)
+That's why: f(D(g)x, w) = f(x, w)
 
 #########
 
-3) Equivariant model: f(g(x), w) = g(f(x, w))
+3) Equivariant model: f(D(g)x) = D'(g)f(x)
 Inputs change, the outputs change accordingly
+
+NOTE:
++ D(g) is the transformation in the vector space of input ``x``
++ D'(g) is the correspond transformation in the vector space of output ``f(x)``
 
 So, in the equivariant models, we need both coordinates and invariant features.
 That's why the interaction in equivariant models are much much more complex
