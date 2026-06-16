@@ -6,6 +6,7 @@ https://www.youtube.com/watch?v=9rS8gtey_Ic&t=119s
 3. Composition, Addition and Multiplication (reducible representations)
 4. Irreducible representations: index, dimension, parity
 5. Spherical harmonics
+6. Code examples
 '''
 
 from e3nn import (
@@ -221,7 +222,7 @@ independent sub-spaces that each transform cleanly on their own
 How to reduce/decompose the outer_product?
 => into 3 components:
     + The trace (diagonal): the scalar product, stays the same after transformation
-    + Anti-symmetric parts (the triu and tril): the cross-product of two vectors, a representation
+    + Anti-symmetric part (the triu and tril): the cross-product of two vectors, a representation
                                                 (transform when the two vectors transform)
     + Symmetric traceless, Degree of freedom: also a representation
 
@@ -393,3 +394,81 @@ They are defined by two numbers: the degree (l) and the order (m).
 
 They are the representation of the highest order (l) of outer_product ``x ⨂ x`` (x multiplied by itself)
 '''
+
+#########################
+## Full tensor product ##
+#########################
+
+# Create a tensor product object of 2 vectors: vector ⨂ vector
+tensor_product = o3.FullTensorProduct(irreps_in1="1o", irreps_in2="1o") # "1o" is a vector
+print(tensor_product)
+# FullTensorProduct(1x1o x 1x1o -> 1x0e+1x1e+1x2e | 3 paths | 0 weights)
+
+print(tensor_product.visualize()) # Visualize the tensor product diagram
+
+vec1 = torch.tensor([1., 2., 3.])
+vec2 = torch.tensor([4., 5., 6.])
+
+tp_v1v2 = tensor_product(vec1, vec2)
+print(tp_v1v2)
+# tensor([18.4752, -2.1213,  4.2426, -2.1213, 12.7279,  9.1924, -0.8165, 19.0919, 9.8995])
+
+'''
+So, the ``tensor_product(vec1, vec2)`` returns 9 numbers:
+    tensor([18.4752, -2.1213,  4.2426, -2.1213, 12.7279,  9.1924, -0.8165, 19.0919, 9.8995])
+
+These 9 numbers are not the raw 3x3 outer_product matrix, but the decomposed ones
+=> 18.4752                                       (L=1) ~ 0e : this is the trace (sum of diagonal), the dot product
+=> [-2.1213,  4.2426, -2.1213]                   (L=3) ~ 1e: this is the anti-symmetric part, the cross-product of two vectors
+=> [12.7279,  9.1924, -0.8165, 19.0919, 9.8995]] (L=5) ~ 2e: this is the symmetric traceless
+'''
+
+#############################################################
+## Full tensor product (Get the highest order result only) ##
+##                (the Spherical Harmonics)                ##
+#############################################################
+'''
+In the above example, the tensor_product returns 9 numbers.
+
+But what if we just care about the results of the highest order component,
+i.e the L=5 symmetric traceless (the 2e part)?
+
+=> Use ``filter_ir_out=["2e"]``
+'''
+
+# Create a tensor product object of 2 vectors: vector ⨂ vector, but return only the "2e" part
+tensor_product_2e = o3.FullTensorProduct(irreps_in1="1o", irreps_in2="1o", filter_ir_out=["2e"])
+print(tensor_product_2e)
+# FullTensorProduct(1x1o x 1x1o -> 1x2e | 1 paths | 0 weights)
+
+vec1 = torch.tensor([1., 2., 3.])
+vec2 = torch.tensor([4., 5., 6.])
+
+tp_v1v2_2e = tensor_product_2e(vec1, vec2)
+print(tp_v1v2_2e)
+# tensor([12.7279,  9.1924, -0.8165, 19.0919,  9.8995])
+'''
+Only the 2e part is returned
+
+As mentioned above, the spherical harmonics are the representation of the highest order (l) of outer_product ``x ⨂ x`` (x multiplied by itself)
+=> The 2e part [12.7279,  9.1924, -0.8165, 19.0919,  9.8995] is the spherical harmonics of ``vec1 ⨂ vec2``
+'''
+
+##########################################################
+## Spherical harmonics of ``x ⨂ x`` and ``x ⨂ x ⨂ x`` ##
+##########################################################
+
+def spherical_harmonics_2vecs(x): # x ⨂ x
+    return o3.FullTensorProduct("1o", "1o", ["2e"])(x, x) # "2e"
+
+def spherical_harmonics_3vecs(x): # x ⨂ x ⨂ x
+    x2 = spherical_harmonics_2vecs(x) # calculate x2 = "2e" = spherical_harmonics(``x ⨂ x``) first
+    return o3.FullTensorProduct("2e", "1o", ["3o"])(x2, x)
+
+print(spherical_harmonics_3vecs(torch.tensor([1., 2., 3.])))
+# tensor([ 13.0000,  14.6969,   2.3238, -13.9140,   6.9714,  19.5959,   9.0000])
+'''L = 2*3 + 1 = 7'''
+
+#------------------------------------------------------------------------------------------------------#
+#------------------------------------------ 6. Code examples ------------------------------------------#
+#------------------------------------------------------------------------------------------------------#
