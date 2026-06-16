@@ -4,15 +4,14 @@ https://www.youtube.com/watch?v=9rS8gtey_Ic&t=119s
 1. Group and Representations (irreps)
 2. Equivariance (and equivariant polynomials)
 3. Composition, Addition and Multiplication (reducible representations)
-4. Irreducible representations: index, dimension, parity
+4. Irreducible representations: index, dimension, parity (o3.FullTensorProduct)
 5. Spherical harmonics
-6. Code examples
+6. Tensor product with weights (o3.FullyConnectedTensorProduct)
+7. Reduce a tensor product (o3.ReducedTensorProducts)
+8. Nonlinearities
 '''
 
-from e3nn import (
-    o3,
-    nn
-)
+from e3nn import o3
 
 import torch
 import sympy as syp
@@ -469,6 +468,77 @@ print(spherical_harmonics_3vecs(torch.tensor([1., 2., 3.])))
 # tensor([ 13.0000,  14.6969,   2.3238, -13.9140,   6.9714,  19.5959,   9.0000])
 '''L = 2*3 + 1 = 7'''
 
+
 #------------------------------------------------------------------------------------------------------#
-#------------------------------------------ 6. Code examples ------------------------------------------#
+#----------------------------------- 6. Tensor product with weights -----------------------------------#
 #------------------------------------------------------------------------------------------------------#
+'''
+The multiplication in "3. Composition, Addition and Multiplication" is just a tensor product.
+-> f(D(g)x) = D'(g)f(x)
+
+But, to make this product trainable, we have to add weights to it.
+-> f(D(g)x, w) = D'(g)f(x, w)
+
+Use ``o3.FullyConnectedTensorProduct()``
+'''
+
+tpw = o3.FullyConnectedTensorProduct("2x1o", "2x1o", "1e") # Don't use "1o + 1o", "2x1o" is more efficient
+tpw.visualize()
+tpw.visualize(plot_weight=False)
+
+print(tpw.parameters())
+# <generator object Module.parameters at 0x7fe66b3a5c40>
+
+print(tpw.weight)
+# Parameter containing:
+# tensor([-2.6920,  0.2254, -1.4972, -1.7274], requires_grad=True)
+'''It has weights, and are trainable via back probagation'''
+
+
+#----------------------------------------------------------------------------------------------------#
+#------------------------------------ 7. Reduced Tensor Products ------------------------------------#
+#----------------------------------------------------------------------------------------------------#
+'''
+A standard tensor product combines two independent features (like atom A and atom B).
+But what if you have a single physical tensor with known index symmetries (like a 3x3 matrix)?
+-> e.g., A symmetric stress tensor (T_ij = T_ji) or an antisymmetric cross-product (T_ij = -T_ji).
+
+Instead of computing the full tensor product and throwing away redundant parts,
+we can use ``o3.ReducedTensorProducts`` to directly project it into the exact irreps it contains.
+'''
+
+# An antisymmetric 2-index tensor made of two vectors ('1o' x '1o')
+# The formula "ij=-ji" enforces antisymmetry (swapping i and j flips the sign)
+rtp = o3.ReducedTensorProducts('ij=-ji', i='1o')
+
+print(rtp.irreps_out)
+# 1x1e
+
+print(rtp.change_of_basis.shape)
+# torch.Size([3, 3, 3])
+# (output_dim=3, input_i_dim=3, input_j_dim=3)
+
+x = torch.tensor([1.0, 0.0, 0.0]) # vector along X
+y = torch.tensor([0.0, 1.0, 0.0]) # vector along Y
+
+result = rtp(x, y)
+print(result)
+# tensor([0., 0., 0.707]) -> This is exactly the cross product (X x Y = Z)!
+
+'''It acts as a fixed, non-trainable mathematical projector based on Clebsch-Gordan coefficients.'''
+
+
+#----------------------------------------------------------------------------------------------------#
+#---------------------------------------- 8. Nonlinearities -----------------------------------------#
+#----------------------------------------------------------------------------------------------------#
+'''
+Like many other neural networks, without linearities, it will train poorly and hence perform poorly as well.
+
+So, for equivariant models, we also need nonlinearities
+
+Φ(P(x))Q(x)
+
+Φ: sigmoid-like functions (for nonlinearities)
+P(x): invariant polynomial
+Q(x): equivariant polynomial
+'''
