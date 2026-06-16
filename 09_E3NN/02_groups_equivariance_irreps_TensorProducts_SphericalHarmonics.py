@@ -5,9 +5,14 @@ https://www.youtube.com/watch?v=9rS8gtey_Ic&t=119s
 2. Equivariance (and equivariant polynomials)
 3. Composition, Addition and Multiplication (reducible representations)
 4. Irreducible representations: index, dimension, parity
+5. Spherical harmonics
 '''
 
-from e3nn import o3
+from e3nn import (
+    o3,
+    nn
+)
+
 import torch
 import sympy as syp
 
@@ -346,4 +351,45 @@ Example:
 
 By keeping track of these labels (l), the size of the data (dimension), and the behavior under reflection (parity),
 e3nn ensures that the neural network respects the fundamental physical laws of space and rotation.
+'''
+
+
+#------------------------------------------------------------------------------------------------------------#
+#------------------------------------------ 5. Spherical harmonics ------------------------------------------#
+#------------------------------------------------------------------------------------------------------------#
+'''
+Spherical harmonics are mathematical functions defined on the surface of a sphere.
+Just as a standard Fourier series uses sines and cosines to break down a 1D wave into different frequencies,
+spherical harmonics do the same thing in 3D.
+They act as a "building block" system for representing complex, spherically mapped data.
+
+At their core, spherical harmonics are the "sine and cosine waves" of a sphere.
+
+If you want to describe a 1D audio signal, you break it down into sine waves using a Fourier transform.
+
+If you want to describe a 2D pattern on the surface of a 3D sphere (like the temperature of the Earth,
+or the electron density around an atom), you break it down into spherical harmonics.
+
+#######################
+
+The easiest way to visualize spherical harmonics is to remember chemistry class.
+The shapes of the electron orbitals (s, p, d, f) are exactly the real spherical harmonics.
+
+They are defined by two numbers: the degree (l) and the order (m).
+# l (degree): Determines the overall complexity or "frequency" of the shape.
+# m (order): Ranges from −l to l. It determines the specific orientation of that shape in 3D space.
+
+┌───────────┬──────────────────────────────┬───────────────────┬───────────────────┬────────────┬───────────┐
+│ Degree (l)┆ Shape Name                   ┆ Chemistry Analogy ┆ Dimensions (2l+1) ┆ e3nn Irrep ┆ Parity    │
+│ ---       ┆ ---                          ┆ ---               ┆ ---               ┆ ---        ┆ ---       │
+╞═══════════╪══════════════════════════════╪═══════════════════╪═══════════════════╪════════════╪═══════════╡
+│ 0         ┆ A simple, uniform sphere     ┆ s-orbital         ┆ 1                 ┆ 0e         ┆ Even (e)  │
+│ 1         ┆ Dumbbells pointing along X,… ┆ p-orbitals        ┆ 3                 ┆ 1o         ┆ Odd (o)   │
+│ 2         ┆ Four-leaf clovers and donuts ┆ d-orbitals        ┆ 5                 ┆ 2e         ┆ Even (e)  │
+│ 3         ┆ Complex multi-lobed shapes   ┆ f-orbitals        ┆ 7                 ┆ 3o         ┆ Odd (o)   │
+└───────────┴──────────────────────────────┴───────────────────┴───────────────────┴────────────┴───────────┘
+
+#######################
+
+They are the representation of the highest order (l) of outer_product ``x ⨂ x`` (x multiplied by itself)
 '''
