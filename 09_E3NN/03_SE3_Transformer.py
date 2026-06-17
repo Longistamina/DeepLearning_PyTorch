@@ -98,8 +98,8 @@ mask = mask & remove_selfloop
 edge_index = mask2edge(mask , counts)
 edge_src, edge_dst = edge_index[0], edge_index[1]
 
-edge_vec = pos[edge_dst] - pos[edge_src]
-edge_dist = edge_vec.norm(dim=-1, keepdim=True)
+edge_vec = pos[edge_src] - pos[edge_dst]
+edge_dist = edge_vec.norm(dim=-1, keepdim=False)
 
 irreps_sh = o3.Irreps.spherical_harmonics(2)
 edge_sh = o3.spherical_harmonics(l=irreps_sh, x=edge_vec, normalize=True, normalization="component")
@@ -125,8 +125,10 @@ Therefore, Values (V) can (and should) contain 3D geometry (1o, 2e)
 -> so the network can pass spatial information forward.
 '''
 
+out_dim = node_features.shape[-1] # 64
+
 # Q, querries
-irreps_node_features = o3.Irreps(f"{node_features.shape[-1]}x0e")
+irreps_node_features = o3.Irreps(f"{out_dim}x0e")
 h_q = o3.Linear(irreps_node_features, irreps_node_features)
 q = h_q(node_features)
 
@@ -134,16 +136,130 @@ q = h_q(node_features)
 tp = o3.FullyConnectedTensorProduct(
     irreps_in1=irreps_node_features,
     irreps_in2=irreps_sh,
-    irreps_out=f"{hidden_dim}x0e + {hidden_dim}x(0e + 1o + 2e)"
+    irreps_out=f"{out_dim}x0e + {out_dim}x0e + {out_dim}x1o + {out_dim}x2e",
+    internal_weights=False, # <--- CRITICAL: Tell TP we will pass the weights manually
+    shared_weights=False    # <--- CRITICAL: Tell TP the weights are different for every edge
 )
 # out shape will be [Num_Edges, Total_Dimensions]
 # Keys: 32 channels of 0e = 32 dims
-# Values: 32*(1 + 3 + 5) = 32 * 9 = 288 dims
-# Total out dim = 32 + 288 = 320
+# Values: 32*(3 + 5) = 32 * 8 = 256 dims
+# Total out dim = 32 + 256 = 288
 
 num_weights_needed = tp.weight_numel
 
-radial_mlp = RadialMLP(rbf_max_freq=32, time_emb_dim=64, num_weights=num_weights_needed)
+radial_mlp = RadialMLP(rbf_max_freq=out_dim, time_emb_dim=hidden_dim, num_weights=num_weights_needed)
+radial_weights = radial_mlp(edge_dist, t_emb[edge_dst])
+
+out_tp = tp(node_features[edge_src], edge_sh, radial_weights)
+
+k = out_tp[:, :out_dim]
+v = out_tp[:, out_dim:]
+
+########################################################
+## Step 2.5: Attention Aggregation (The Missing Link) ##
+########################################################
+
+# 1. Map Queries to edges
+# q is [L, 32]. We need it at the edges to dot-product with k.
+edge_q = q[edge_dst] # Shape: [E, 32]
+
+# 2. Invariant Dot Product (The "Aha!" moment)
+# Because Q and K are both pure scalars (0e) in Layer 1,
+# their dot product is just a standard sum over the hidden dimension.
+logits = (edge_q * k).sum(dim=-1) # + logbin_emb
+
+# 3. Scatter Softmax (No PyG needed!)
+def scatter_softmax(logits, index, dim_size):
+    # Max for numerical stability
+    logits_max = torch.zeros(dim_size, device=logits.device).scatter_reduce_(
+        0, index, logits, reduce='amax'
+    )
+    # Exp
+    logits_exp = torch.exp(logits - logits_max[index])
+    # Sum of exp
+    sum_exp = torch.zeros(dim_size, device=logits.device).scatter_reduce_(
+        0, index, logits_exp, reduce='sum'
+    )
+    # Normalize
+    return logits_exp / sum_exp[index]
+
+alpha = scatter_softmax(logits, edge_dst, dim_size=L) # Shape: [E]
+
+# 4. Weight the Values and Aggregate to Nodes
+weighted_v = alpha.unsqueeze(-1) * v # Shape: [E, 256]
+
+# Pure PyTorch scatter_add
+agg_messages = torch.zeros(L, v.shape[-1], device=v.device)
+idx = edge_dst.view(-1, 1).expand_as(weighted_v)
+agg_messages.scatter_add_(0, idx, weighted_v) # Shape: [L, 256]
+
+##########################################################
+## Step 3: Self-Interaction & Equivariant Non-Linearity ##
+##########################################################
+'''
+In the 2020 SE(3)-Transformer paper, "Attentive Self-Interaction" (Eq. 13)
+used an MLP on the dot-products of a node's own features to mix its channels.
+
+In modern e3nn, we achieve this (and more) using two native tools:
+1. o3.Linear: Mixes channels of the same degree (The Self-Interaction).
+2. enn.Gate: Uses scalar channels to "gate" (multiply) the vector/tensor
+   channels. This is the mathematically robust equivalent of the paper's
+   attentive non-linearity.
+'''
+
+irreps_agg = o3.Irreps(f"{out_dim}x0e + {out_dim}x1o + {out_dim}x2e") # 576 dims
+
+# 1. Self-Interaction
+self_interaction = o3.Linear(irreps_agg, irreps_agg)
+mixed_messages = self_interaction(agg_messages) # No more crash!
+
+# 2. Skip Connection
+project_skip = o3.Linear(irreps_node_features, irreps_agg)
+skip_connection = project_skip(node_features)
+node_out = mixed_messages + skip_connection
+
+# 3. Equivariant Non-Linearity (The Gate)
+# FIX: Use out_dim (64) instead of hidden_dim (32)
+irreps_scalars = o3.Irreps(f"{out_dim}x0e")
+irreps_gated = o3.Irreps(f"{out_dim}x1o + {out_dim}x2e")
+
+# We need exactly one gate scalar for every single gated irrep (64 + 64 = 128)
+num_gated_irreps = sum(mul for mul, ir in irreps_gated)
+irreps_gates = o3.Irreps(f"{num_gated_irreps}x0e")
+
+gate = enn.Gate(
+    irreps_scalars, [torch.nn.SiLU()],
+    irreps_gates, [torch.sigmoid],
+    irreps_gated
+)
+
+prep_gate = o3.Linear(irreps_agg, gate.irreps_in)
+node_features_next_layer = gate(prep_gate(node_out))
+
+print(f"Output of Layer 1: {node_features_next_layer.shape}")
+print(f"Output Irreps: {gate.irreps_out}")
+
+##############################################################
+## Step 4: The Diffusion Output Head (Predicting the Noise) ##
+##############################################################
+'''
+Your target is a 3D vector per node (Shape: [N, 3]).
+In e3nn, this is represented as "1x1o".
+'''
+
+# 1. Define the target irrep
+irreps_target = o3.Irreps("1x1o")
+
+# 2. Create the equivariant output head
+# o3.Linear acts as a mathematical filter. It will automatically ignore
+# the scalars (0e) and tensors (2e) in your node features, and ONLY
+# extract and mix the vector (1o) channels to produce the final prediction.
+output_head = o3.Linear(gate.irreps_out, irreps_target)
+
+# 3. Predict the noise (Shape: [N, 3])
+predicted_noise = output_head(node_features_next_layer)
+
+print(f"Predicted Noise Shape: {predicted_noise.shape}") # torch.Size([100, 3])
 
 
 #--------------------------------------------------------------------------------------------------------------------------#
@@ -175,18 +291,9 @@ class RadialMLP(nn.Module):
         )
 
     def forward(self, edge_dist, time_emb):
-        # edge_dist shape: [Num_Edges, 1]
-        # time_emb shape:  [Num_Edges, time_emb_dim]
-        # (Note: if time_emb is global per-graph, you must expand it to match edges first)
-
-        rbf_feats = self.rbf(edge_dist) # Shape: [Num_Edges, rbf_max_freq]
-
-        # Concatenate geometry (distance) and diffusion state (time)
+        rbf_feats = self.rbf(edge_dist)  # Shape: [E, rbf_max_freq]
         x = torch.cat([rbf_feats, time_emb], dim=-1)
-
-        # Generate the weights
-        weights = self.mlp(x) # Shape: [Num_Edges, num_weights_needed]
-        return weights
+        return self.mlp(x)
 
 class SinusoidalPositionEmbedding(nn.Module):
     def __init__(self, dim, base=10000.):
