@@ -1,5 +1,5 @@
 import torch
-from functools import partial
+import torch.nn as nn
 
 _NORM_TYPE_LIST = [
     'equivariant_layer_norm',
@@ -22,8 +22,9 @@ def get_normalization_layer(norm_type, lmax, num_channels, eps=1e-5, affine=True
 ## EquivariantLayerNorm ##
 ##########################
 
-class EquivariantLayerNorm(torch.nn.Module):
-    def __init__(self, lmax, num_channels, eps=1e-5, affine=True, normalization='component'):
+
+class EquivariantLayerNorm(nn.Module):
+    def __init__(self, lmax, num_channels, eps=1e-5, affine=True):
         super().__init__()
         self.lmax = lmax
         self.num_channels = num_channels
@@ -31,62 +32,46 @@ class EquivariantLayerNorm(torch.nn.Module):
         self.affine = affine
 
         if affine:
-            self.affine_weight = torch.nn.Parameter(torch.ones((self.lmax + 1), self.num_channels))
-            self.affine_bias = torch.nn.Parameter(torch.zeros(self.num_channels))
-        else:
-            self.register_parameter("affine_weight", None)
-            self.register_parameter("affine_bias", None)
+            # One weight per degree l, applied to all C channels
+            self.affine_weight = nn.Parameter(torch.ones(lmax + 1, num_channels))
+            self.affine_bias = nn.Parameter(torch.zeros(num_channels))
 
-        assert normalization in ['norm', 'component']
-        self.normalization = normalization
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}(lmax={self.lmax}, num_channels={self.num_channels}, eps={self.eps})"
-
-    @torch.cuda.amp.autocast(enabled=False)
-    def forward(self, inputs):
-        """1.   `inputs` shape: (num_nodes, (self.lmax + 1) ** 2, self.num_channels)"""
-
-        outputs = []
+    def forward(self, x):
+        # x: [N, C * (L+1)^2] flat layout
+        N = x.shape[0]
+        out = []
+        idx = 0
 
         for l in range(self.lmax + 1):
-            start_idx = l**2
-            length = 2*l + 1
+            dim = self.num_channels * (2 * l + 1)
+            f_l = x[:, idx : idx + dim]
 
-            feature = inputs.narrow(1, start_idx, length)
+            # Reshape to [N, Channels, m_components]
+            f_l = f_l.view(N, self.num_channels, 2 * l + 1)
 
-            # For scalrs, first compute and subtract the mean
             if l == 0:
-                feature_mean = torch.mean(feature, dim=2, keepdim=True)
-                feature = feature - feature_mean
+                # Scalars: standard LayerNorm centering
+                mean = f_l.mean(dim=1, keepdim=True)
+                f_l = f_l - mean
 
-            # Then compute the rescaling factor (norm of each feature vector)
-            # Rescaling of the norms themselves based on the option "normalization"
-            if self.normalization == 'norm':
-                feature_norm = feature.pow(2).sum(dim=1, keepdim=True) # [N, 1, C]
-            elif self.normalization == 'component':
-                feature_norm = feature.pow(2).mean(dim=1, keepdim=True) # [N, 1, C]
-
-            feature_norm = torch.mean(feature_norm, dim=2, keepdim=True) # [N, 1, 1]
+            # Compute norm over m-components (dim=2)
+            feature_norm = f_l.pow(2).mean(dim=2, keepdim=True) # [N, C, 1]
             feature_norm = (feature_norm + self.eps).pow(-0.5)
 
             if self.affine:
-                weight = self.affine_weight.narrow(0, l, 1) # [1, C]
-                weight = weight.view(1, 1, -1)              # [1, 1, C]
-                feature_norm = feature_norm * weight        # [N, 1, C]
+                weight = self.affine_weight[l].view(1, self.num_channels, 1)
+                feature_norm = feature_norm * weight
 
-            feautre = feature * feature_norm
+            f_l = f_l * feature_norm
 
-            if self.affine and (l == 0):
-                bias = self.affine_bias
-                bias = bias.view(1, 1, -1)
-                feature = feature + bias
+            if self.affine and l == 0:
+                bias = self.affine_bias.view(1, self.num_channels, 1)
+                f_l = f_l + bias
 
-            outputs.append(feature)
+            out.append(f_l.view(N, -1))
+            idx += dim
 
-        outputs = torch.cat(outputs, dim=-1)
-
-        return outputs
+        return torch.cat(out, dim=-1)
 
 ###############################
 ## EquivariantMergeLayerNorm ##
@@ -144,7 +129,7 @@ class EquivariantMergeLayerNorm(torch.nn.Module):
     def __repr__(self):
         return f"{self.__class__.__name__}(lmax={self.lmax}, num_channels={self.num_channels}, eps={self.eps}, std_balance_degrees={self.std_balance_degrees}, centering={self.centering})"
 
-    @torch.cuda.amp.autocast(enabled=False)
+    @torch.amp.autocast('cuda', enabled=False)
     def forward(self, inputs):
         """
             1.  `inputs` shape: (num_nodes, (self.lmax + 1) ** 2, self.num_channels)

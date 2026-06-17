@@ -1,14 +1,6 @@
 import torch
 from torch import Tensor
 import torch.nn.functional as F
-import torch.nn as nn
-import math
-
-from e3nn import (
-    o3,
-    nn as enn,
-    math as emath
-)
 
 ######################################
 ## Create BigBird mask (edge_index) ##
