@@ -1,27 +1,9 @@
 import torch
 import torch.nn as nn
 
-_NORM_TYPE_LIST = [
-    'equivariant_layer_norm',
-    'merge_layer_norm',
-    'merge_layer_norm_attn_rms_norm',   # Use `EquivariantMergeLayerNorm` for the pre-norm layer
-                                        # and `RMSNorm` for attention re-normalization
-]
-
-def get_normalization_layer(norm_type, lmax, num_channels, eps=1e-5, affine=True, normalization='component'):
-    assert norm_type in _NORM_TYPE_LIST
-    if norm_type == 'equivariant_layer_norm':
-        norm_class = EquivariantLayerNorm
-    elif norm_type in ['merge_layer_norm', 'merge_layer_norm_attn_rms_norm']:
-        norm_class = EquivariantMergeLayerNorm
-    else:
-        raise ValueError
-    return norm_class(lmax, num_channels, eps, affine, normalization)
-
 ##########################
 ## EquivariantLayerNorm ##
 ##########################
-
 
 class EquivariantLayerNorm(nn.Module):
     def __init__(self, lmax, num_channels, eps=1e-5, affine=True):
@@ -50,23 +32,32 @@ class EquivariantLayerNorm(nn.Module):
             f_l = f_l.view(N, self.num_channels, 2 * l + 1)
 
             if l == 0:
-                # Scalars: standard LayerNorm centering
+                # ==========================================
+                # SCALARS (l=0): Standard LayerNorm
+                # Normalize across the channel dimension (dim=1)
+                # ==========================================
                 mean = f_l.mean(dim=1, keepdim=True)
-                f_l = f_l - mean
+                var = f_l.var(dim=1, keepdim=True, unbiased=False)
+                f_l = (f_l - mean) / torch.sqrt(var + self.eps)
 
-            # Compute norm over m-components (dim=2)
-            feature_norm = f_l.pow(2).mean(dim=2, keepdim=True) # [N, C, 1]
-            feature_norm = (feature_norm + self.eps).pow(-0.5)
+                if self.affine:
+                    weight = self.affine_weight[l].view(1, self.num_channels, 1)
+                    bias = self.affine_bias.view(1, self.num_channels, 1)
+                    f_l = (f_l * weight) + bias
 
-            if self.affine:
-                weight = self.affine_weight[l].view(1, self.num_channels, 1)
-                feature_norm = feature_norm * weight
+            else:
+                # ==========================================
+                # VECTORS/TENSORS (l>0): Equivariant RMSNorm
+                # Normalize across the spatial m-components (dim=2)
+                # ==========================================
+                feature_norm = f_l.pow(2).mean(dim=2, keepdim=True) # [N, C, 1]
+                feature_norm = (feature_norm + self.eps).pow(-0.5)
 
-            f_l = f_l * feature_norm
+                if self.affine:
+                    weight = self.affine_weight[l].view(1, self.num_channels, 1)
+                    feature_norm = feature_norm * weight
 
-            if self.affine and l == 0:
-                bias = self.affine_bias.view(1, self.num_channels, 1)
-                f_l = f_l + bias
+                f_l = f_l * feature_norm
 
             out.append(f_l.view(N, -1))
             idx += dim

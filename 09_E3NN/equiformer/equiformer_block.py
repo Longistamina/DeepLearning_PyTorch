@@ -2,8 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from convert_so3_flat import (
+    flat_to_so3,
+    so3_to_flat
+)
+
 from so2_attention import SO2EquivariantGraphAttention
-from equivariant_norms import EquivariantLayerNorm
+from equivariant_norms import EquivariantMergeLayerNorm # EquivariantLayerNorm
 
 ##############################################
 
@@ -126,37 +131,41 @@ class EquivariantFFN(nn.Module):
 class EquiformerBlock(nn.Module):
     def __init__(self, lmax, channels, channels_q, channels_hidden):
         super().__init__()
+        self.lmax = lmax
+        self.channels = channels
 
-        # 1. Attention Branch
-        self.norm1 = EquivariantLayerNorm(lmax, channels)
+        # 1. Attention Branch (Using the fast MergeLayerNorm)
+        self.norm1 = EquivariantMergeLayerNorm(lmax, channels)
         self.attn = SO2EquivariantGraphAttention(
-            lmax=lmax,
-            channels_in=channels,
-            channels_q=channels_q,
-            channels_kv=channels
+            lmax=lmax, channels_in=channels, channels_q=channels_q, channels_kv=channels
         )
 
         # 2. FFN Branch
-        self.norm2 = EquivariantLayerNorm(lmax, channels)
+        self.norm2 = EquivariantMergeLayerNorm(lmax, channels)
         self.ffn = EquivariantFFN(
-            lmax=lmax,
-            channels_in=channels,
-            channels_hidden=channels_hidden,
-            channels_out=channels
+            lmax=lmax, channels_in=channels, channels_hidden=channels_hidden, channels_out=channels
         )
 
-    def forward(self, x, edge_src, edge_dst, edge_vec, radial_weights):
+    def forward(self, x, edge_src, edge_dst, edge_vec, edge_dist, radial_weights):
         """
-        x: [N, C * (L+1)^2]
+        x: [N, C * (L+1)^2] (Flat layout)
         """
-        # Residual 1: Attention
-        x_norm1 = self.norm1(x)
-        attn_out = self.attn(x_norm1, edge_src, edge_dst, edge_vec, radial_weights)
+        # --- Residual 1: Attention ---
+        # Convert to SO3 for the fast Norm, then back to Flat for Attention
+        x_so3 = flat_to_so3(x, self.channels, self.lmax)
+        x_norm1_so3 = self.norm1(x_so3)
+        x_norm1_flat = so3_to_flat(x_norm1_so3, self.channels, self.lmax)
+
+        attn_out = self.attn(x_norm1_flat, edge_src, edge_dst, edge_vec, edge_dist, radial_weights)
         x = x + attn_out
 
-        # Residual 2: FFN
-        x_norm2 = self.norm2(x)
-        ffn_out = self.ffn(x_norm2)
+        # --- Residual 2: FFN ---
+        # Convert to SO3 for the fast Norm, then back to Flat for FFN
+        x_so3 = flat_to_so3(x, self.channels, self.lmax)
+        x_norm2_so3 = self.norm2(x_so3)
+        x_norm2_flat = so3_to_flat(x_norm2_so3, self.channels, self.lmax)
+
+        ffn_out = self.ffn(x_norm2_flat)
         x = x + ffn_out
 
         return x

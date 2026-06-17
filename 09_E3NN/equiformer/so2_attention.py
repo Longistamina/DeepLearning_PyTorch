@@ -10,6 +10,13 @@ from so2_math import (
     SO2_Mixer
 )
 
+from convert_so3_flat import (
+    flat_to_so3,
+    so3_to_flat
+)
+
+#########################################
+
 class SO2EquivariantGraphAttention(nn.Module):
     def __init__(self, lmax, channels_in, channels_q, channels_kv):
         super().__init__()
@@ -38,6 +45,13 @@ class SO2EquivariantGraphAttention(nn.Module):
         # It outputs channels_kv * 2 (half for Keys, half for Values)
         self.kv_mixer = SO2_Mixer(lmax, channels_in, channels_kv * 2)
 
+        self.out_proj = SO3Linear(
+            in_features=channels_kv,
+            out_features=channels_in, # Maps back to residual stream width
+            lmax=lmax,
+            bias=True
+        )
+
     def split_by_degree(self, flat_features, channels):
         """
         Splits a flat e3nn-style tensor [N, C * (L+1)^2] into a list of [N, C, 2l+1]
@@ -62,13 +76,14 @@ class SO2EquivariantGraphAttention(nn.Module):
             flat.append(f_l)
         return torch.cat(flat, dim=-1)
 
-    def forward(self, node_features, edge_src, edge_dst, edge_vec, radial_weights):
+    def forward(self, node_features, edge_src, edge_dst, edge_vec, edge_dist, radial_weights):
         """
         Args:
             node_features: [N, C_in * (L+1)^2] (Flat equivariant features)
             edge_src:      [E]
             edge_dst:      [E]
             edge_vec:      [E, 3] (Raw 3D vectors, NO spherical harmonics needed!)
+            edge_dist:     [E] (Raw 3D euclidean distance)
             radial_weights:[E, (L+1)^2, C_kv * 2] (Output of RadialFunction)
         """
         N = node_features.shape[0]
@@ -80,7 +95,7 @@ class SO2EquivariantGraphAttention(nn.Module):
         src_feats_by_l = self.split_by_degree(src_feats, self.channels_in)
 
         # Calculate Euler angles to align edge_vec to the Z-axis
-        alpha, beta, gamma = get_alignment_angles(edge_vec)
+        alpha, beta, gamma = get_alignment_angles(edge_vec, edge_dist)
 
         # Rotate source features into the local edge frame
         local_feats_by_l = rotate_to_local_frame(src_feats_by_l, alpha, beta, gamma, self.lmax)
@@ -99,11 +114,15 @@ class SO2EquivariantGraphAttention(nn.Module):
         global_feats_by_l = rotate_to_global_frame(mixed_local_feats_by_l, alpha, beta, gamma, self.lmax)
 
         # Flatten back to standard tensor and split into Keys and Values
-        kv_flat = self.flatten_degrees(global_feats_by_l, self.channels_kv * 2)
+        k_features_by_l = []
+        v_features_by_l = []
+        for l in range(self.lmax + 1):
+            f_l = global_feats_by_l[l]  # [E, 2*C_kv, 2l+1]
+            k_features_by_l.append(f_l[:, :self.channels_kv, :])   # [E, C_kv, 2l+1]
+            v_features_by_l.append(f_l[:, self.channels_kv:, :])   # [E, C_kv, 2l+1]
 
-        half_dim = kv_flat.shape[-1] // 2
-        k_flat = kv_flat[:, :half_dim]  # [E, C_kv * (L+1)^2]
-        v_flat = kv_flat[:, half_dim:]  # [E, C_kv * (L+1)^2]
+        k_flat = self.flatten_degrees(k_features_by_l, self.channels_kv)
+        v_flat = self.flatten_degrees(v_features_by_l, self.channels_kv)
 
         # ==========================================
         # STEP 4: Invariant Attention Logits
@@ -136,4 +155,51 @@ class SO2EquivariantGraphAttention(nn.Module):
         idx = edge_dst.view(-1, 1).expand_as(weighted_v)
         agg_messages.scatter_add_(0, idx, weighted_v) # [N, D_v]
 
-        return agg_messages
+        # ==========================================
+        # STEP 6: Output Projection (The Conversion Step)
+        # ==========================================
+        # 1. Convert Flat -> SO3 layout for SO3Linear
+        agg_so3 = flat_to_so3(agg_messages, self.channels_kv, self.lmax)
+
+        # 2. Apply Equivariant Channel Mixing
+        out_so3 = self.out_proj(agg_so3)
+
+        # 3. Convert SO3 -> Flat layout for the rest of the network
+        out_flat = so3_to_flat(out_so3, self.channels_in, self.lmax)
+
+        return out_flat
+
+
+class SO3Linear(torch.nn.Module):
+    def __init__(self, in_features, out_features, lmax, bias=True):
+        '''
+            1.  Use `torch.einsum` to prevent slicing and concatenation
+            2.  Need to specify some behaviors in `no_weight_decay` and weight initialization.
+        '''
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.lmax = lmax
+
+        self.weight = torch.nn.Parameter(torch.randn((self.lmax + 1), out_features, in_features))
+        bound = 1 / math.sqrt(self.in_features)
+        torch.nn.init.uniform_(self.weight, -bound, bound)
+        self.bias = torch.nn.Parameter(torch.zeros(1, 1, out_features)) if bias else None
+
+        expand_index = torch.zeros([(lmax + 1) ** 2]).long()
+        for l in range(lmax + 1):
+            start_idx = l ** 2
+            length = 2 * l + 1
+            expand_index[start_idx : (start_idx + length)] = l
+        self.register_buffer('expand_index', expand_index)
+
+
+    def forward(self, inputs):
+        weight = torch.index_select(self.weight, dim=0, index=self.expand_index)        # [(L_max + 1) ** 2, C_out, C_in]
+        outputs = torch.einsum('bmi, moi -> bmo', inputs, weight)                       # [N, (L_max + 1) ** 2, C_out]
+        outputs[:, 0:1, :] = outputs.narrow(1, 0, 1) + self.bias
+        return outputs
+
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(in_features={self.in_features}, out_features={self.out_features}, lmax={self.lmax}, bias={(self.bias is not None)})"
