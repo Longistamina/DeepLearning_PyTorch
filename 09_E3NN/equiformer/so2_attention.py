@@ -76,17 +76,18 @@ class SO2EquivariantGraphAttention(nn.Module):
             flat.append(f_l)
         return torch.cat(flat, dim=-1)
 
-    def forward(self, node_features, edge_src, edge_dst, edge_vec, edge_dist, radial_weights):
+    def forward(self, node_features, edge_index, edge_vec, edge_dist, radial_weights):
         """
         Args:
             node_features: [N, C_in * (L+1)^2] (Flat equivariant features)
-            edge_src:      [E]
-            edge_dst:      [E]
+            edge_index:    [2, E]
             edge_vec:      [E, 3] (Raw 3D vectors, NO spherical harmonics needed!)
             edge_dist:     [E] (Raw 3D euclidean distance)
             radial_weights:[E, (L+1)^2, C_kv * 2] (Output of RadialFunction)
         """
         N = node_features.shape[0]
+        edge_src = edge_index[0]
+        edge_dst = edge_index[1]
 
         # ==========================================
         # STEP 1: The SO(2) Reduction (Local Frame)

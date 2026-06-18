@@ -20,6 +20,8 @@ def test_equiformer_block():
 
     edge_src = torch.randint(0, N, (E,))
     edge_dst = torch.randint(0, N, (E,))
+    edge_index = torch.stack((edge_src, edge_dst), dim=0)
+
     edge_vec = torch.randn(E, 3)
     edge_dist = edge_vec.norm(dim=-1, keepdim=False)
 
@@ -43,7 +45,7 @@ def test_equiformer_block():
 
     # --- 4. Forward Pass ---
     print("Running Forward Pass...")
-    out = block(node_features, edge_src, edge_dst, edge_vec, edge_dist, radial_weights)
+    out = block(node_features, edge_index, edge_vec, edge_dist, radial_weights)
 
     print("✅ Test Passed!")
     print(f"Input Shape:  {node_features.shape}")

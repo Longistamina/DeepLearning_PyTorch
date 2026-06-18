@@ -146,7 +146,7 @@ class EquiformerBlock(nn.Module):
             lmax=lmax, channels_in=channels, channels_hidden=channels_hidden, channels_out=channels
         )
 
-    def forward(self, x, edge_src, edge_dst, edge_vec, edge_dist, radial_weights):
+    def forward(self, x, edge_index, edge_vec, edge_dist, radial_weights):
         """
         x: [N, C * (L+1)^2] (Flat layout)
         """
@@ -156,7 +156,7 @@ class EquiformerBlock(nn.Module):
         x_norm1_so3 = self.norm1(x_so3)
         x_norm1_flat = so3_to_flat(x_norm1_so3, self.channels, self.lmax)
 
-        attn_out = self.attn(x_norm1_flat, edge_src, edge_dst, edge_vec, edge_dist, radial_weights)
+        attn_out = self.attn(x_norm1_flat, edge_index, edge_vec, edge_dist, radial_weights)
         x = x + attn_out
 
         # --- Residual 2: FFN ---
